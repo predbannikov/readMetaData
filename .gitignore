@@ -1,0 +1,11 @@
+*.prev
+*.rar
+Testing/
+*.txt
+.txt
+CMakeFiles/
+.cmake/
+*.user
+*.cmake
+Makefile
+readMetaData
