@@ -15,13 +15,17 @@ public:
     static const char signature[8];
 
     InfoRAR5(std::vector<char> &data);
+    ~InfoRAR5();
+
+
     bool readMainHead() override;
     bool setStateHeader() override;
     bool readNextBlock() override;
-    ~InfoRAR5();
 
     size_t pos;
     vint_t getVInteger();
+    std::string getStrSizeOfExtraArea(vint_t);
+    std::string getStrSizeOfData(vint_t);
 };
 
 

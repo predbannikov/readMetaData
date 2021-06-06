@@ -1,5 +1,5 @@
-#ifndef INFORAR_H
-#define INFORAR_H
+#ifndef INFOARCH_H
+#define INFOARCH_H
 
 #include <fstream>
 
@@ -8,7 +8,7 @@
 #include "InfoRAR5.h"
 
 
-class InfoRAR {
+class InfoArch {
     std::string m_sFileName;
     std::ifstream file;
     std::vector<char> vec;
@@ -22,10 +22,10 @@ class InfoRAR {
     int size = 0;
 
 public:
-    InfoRAR(){
+    InfoArch(){
         rar_version = "nan";
     }
-    ~InfoRAR() {
+    ~InfoArch() {
     }
     BaseRAR *rar;
     bool open(std::string a_sFileName) {
@@ -69,6 +69,7 @@ public:
     void init() {
         rar->readMainHead();
         rar->readNextBlock();
+//        rar->readNextBlock();
 
     }
 
@@ -89,15 +90,9 @@ public:
 
         std::cout << std::endl;
 
-        if(rar_version == "RAR 5.0") {
-//            readMainHeadV5();
-//            readNextBlockV5();
-        } else if(rar_version == "RAR 4.x") {
-//            readMainHeadV4();
-//            readNextBlock();
-        }
+
     }
 };
 
-#endif  // INFORAR_H
+#endif  // INFOARCH_H
 

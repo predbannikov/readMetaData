@@ -1,15 +1,15 @@
 #include <iostream>
 
-#include "InfoRAR.h"
+#include "InfoArch.h"
 
 
 int main(int argc, char* argv[])
 {
-    InfoRAR rar;
-    if(!rar.open("./test.rar")) {
+    InfoArch archive;
+    if(!archive.open("./test.rar")) {
         std::cerr << "exit program" << std::endl;
     }
-    rar.readMetaData();
+    archive.readMetaData();
 
 
     std::cout << std::endl;

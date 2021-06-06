@@ -7,6 +7,7 @@
 #include <algorithm>
 
 
+
 #define HEX_OUT_LAMBDA [](const unsigned char & byte) { std::cout << std::hex << std::setfill('0') << std::setw(2) << (0xFF&byte) << " " << std::flush; }
 
 #define CHAR_OUT_LAMBDA [](const unsigned char & byte) { if(byte > 31 && byte ) {std::cout << byte << std::flush; } }
@@ -27,6 +28,7 @@ struct Block {
     uint8_t length;
 
 };
+
 
 class BaseRAR;
 
@@ -52,6 +54,7 @@ public:
     ~BaseRAR() {};
 
     Block block;
+    std::string strInfo;
 };
 
 
