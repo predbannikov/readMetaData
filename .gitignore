@@ -9,3 +9,6 @@ CMakeFiles/
 *.cmake
 Makefile
 readMetaData
+readMetaData.exe
+*.user.*
+qtcsettings*

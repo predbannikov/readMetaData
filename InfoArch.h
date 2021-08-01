@@ -47,7 +47,7 @@ public:
         file.close();
         if(!checkArchive())
             return false;
-        std::cout << "check archive success, found " << rar_version << std::endl;
+        std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
         init();
         return true;
     }
@@ -67,28 +67,19 @@ public:
     }
 
     void init() {
-        rar->readMainHead();
-        rar->readNextBlock();
-//        rar->readNextBlock();
 
+        // TODO запустить разбор в цикле
+        // читать readNextBlock
+        // пока не закончится файл
+        rar->readNextBlock();
+        rar->readNextBlock();
+        // ...
     }
 
 
     void readMetaData() {
 
-//        auto outHex = [](const unsigned char & byte) {
-//            std::cout << std::hex << std::setfill('0') << std::setw(2) << (0xFF&byte) << " " << std::flush;
-//        };
-        auto outChar = [](const unsigned char & byte) {
-            if(byte > 31 && byte ) {
-                std::cout << byte << std::flush;
-            }
-        };
-//        std::for_each(std::begin(data), std::end(data), outHex);
-        std::cout << std::endl;
-        std::for_each(std::begin(data), std::end(data), outChar);
 
-        std::cout << std::endl;
 
 
     }

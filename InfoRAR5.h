@@ -3,6 +3,7 @@
 #include "baserar.h"
 
 typedef uint64_t vint_t;
+typedef unsigned int uint;
 
 class InfoRAR5 : public BaseRAR{
     vint_t sizeHeader;
@@ -18,13 +19,11 @@ public:
     ~InfoRAR5();
 
 
-    bool readMainHead() override;
     bool setStateHeader() override;
     bool readNextBlock() override;
 
-    size_t pos;
+    std::vector<char>::const_iterator getVIntegerIt();
     vint_t getVInteger();
-    std::string getStrSizeOfExtraArea(vint_t);
     std::string getStrSizeOfData(vint_t);
 };
 

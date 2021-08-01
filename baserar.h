@@ -42,8 +42,14 @@ public:
     size_t typeHeader;
     const std::vector<char> *data;
     std::vector<Block*> blocks;
+//    std::ios_base::fmtflags hexFlags;
+    std::ios_base::fmtflags defFlags;
     BaseRAR(const std::vector<char> &data_) : data(&data_){
         block.data.resize(data->size());
+        defFlags = std::cout.flags();
+//        std::cout << std::hex << std::setfill('0') << std::setw(2) << std::uppercase;
+//        hexFlags = std::cout.flags();
+//        std::cout.flags(defFlags);
         seek = 7;
     };
 
@@ -52,7 +58,7 @@ public:
     virtual bool readNextBlock(){};
 
     ~BaseRAR() {};
-
+    std::vector<char>::const_iterator pos;
     Block block;
     std::string strInfo;
 };
