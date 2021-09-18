@@ -58,7 +58,7 @@ public:
             rar_version = "RAR 5.0";
             rar = new InfoRAR5(data);
             return true;
-        } else if(std::equal(std::begin(InfoRAR4x::signature), std::end(InfoRAR4x::signature), data.data())) {
+        } else if(std::equal(std::begin(InfoRAR4x::signature), std::end(InfoRAR4x::signature), data.data()))  {
             rar_version = "RAR 4.x";
             rar = new InfoRAR4x(data);
             return true;

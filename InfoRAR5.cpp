@@ -23,6 +23,7 @@ bool InfoRAR5::setStateHeader()
     case 4:
         return true;;
     case 5:
+        state = STATE_END_OF_ARCHIVE_HEADER;
         return true;;
 
     }
@@ -96,7 +97,7 @@ bool InfoRAR5::readNextBlock() {
         else
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "WINDOWS used to create this archive." << std::endl;
 
-
+        int *__restrict__ t;
 
         auto name_it_loc= getVIntegerIt();
         std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:";
@@ -120,19 +121,21 @@ bool InfoRAR5::readNextBlock() {
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_data_size) << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
             auto data_size_it_loc = pos + header_data_size;
-            std::copy_if(pos, data_size_it_loc, std::ostream_iterator<char>(std::cout), [](const char &byte) {
+            std::copy_if(pos, pos+5, std::ostream_iterator<char>(std::cout), [](const char &byte) {
                 return byte>31;
             });
             std::cout << "\"" << std::endl;
             pos = data_size_it_loc;
         }
-        std::copy_if(pos, data->end(), std::ostream_iterator<uint16_t>(std::cout<<std::showbase<<std::hex, " "), [](const char &byte) {
+        /*std::copy_if(pos, pos+10, std::ostream_iterator<uint16_t>(std::cout<<std::showbase<<std::hex, " "), [](const char &byte) {
             return byte>31;
-        });
+        });*/
 
         std::cout << std::endl;
         break;
     }
+    case STATE_END_OF_ARCHIVE_HEADER:
+            return false;
     }
 
     return true;

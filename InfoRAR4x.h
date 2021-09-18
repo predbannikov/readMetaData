@@ -10,7 +10,8 @@ public:
     InfoRAR4x(std::vector<char> &data_):BaseRAR(data_){};
 
     //************* MAIN HEADER *************//
-    bool readMainHead() override;
+    bool setStateHeader() override;
+//    bool readMainHead() override;
     bool readNextBlock() override;
     ~InfoRAR4x();
 

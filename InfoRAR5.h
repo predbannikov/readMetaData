@@ -3,7 +3,6 @@
 #include "baserar.h"
 
 typedef uint64_t vint_t;
-typedef unsigned int uint;
 
 class InfoRAR5 : public BaseRAR{
     vint_t sizeHeader;

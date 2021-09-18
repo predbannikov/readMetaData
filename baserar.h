@@ -32,7 +32,7 @@ struct Block {
 
 class BaseRAR;
 
-enum STATE_HEADER {STATE_MARKER_HEADER = 0, STATE_MAIN_HEADER = 1, STATE_FILE_HEADER = 2};
+enum STATE_HEADER {STATE_MARKER_HEADER = 0, STATE_MAIN_HEADER = 1, STATE_FILE_HEADER = 2, STATE_END_OF_ARCHIVE_HEADER = 5};
 
 class BaseRAR {
 public:
@@ -53,9 +53,8 @@ public:
         seek = 7;
     };
 
-    virtual bool setStateHeader(){};
-    virtual bool readMainHead(){};
-    virtual bool readNextBlock(){};
+    virtual bool setStateHeader() { return bool();};
+    virtual bool readNextBlock() { return bool();};
 
     ~BaseRAR() {};
     std::vector<char>::const_iterator pos;
