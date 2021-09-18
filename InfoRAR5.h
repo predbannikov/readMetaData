@@ -2,29 +2,44 @@
 #define INFORAR5_H
 #include "baserar.h"
 
-typedef uint64_t vint_t;
+#define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
+#define MAX_SHOW_NUMBER_DATA_HEADER 5
+
+using vint_t = uint64_t;
 
 class InfoRAR5 : public BaseRAR{
-    vint_t sizeHeader;
+    vint_t size_header;
     vint_t typeHeader;
     vint_t flagHeader;
     vint_t extraAreaSize;
     vint_t archiveFlags;
     vint_t volumeNumber;
 public:
-    static const char signature[8];
+    static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
     InfoRAR5(std::vector<char> &data);
     ~InfoRAR5();
 
+// âûñòàâëÿåò ñîñòîÿíåíèå ïåðåìåííîé STATE_HEADER state
+/*Type of archive header. Possible values are:
+  1   Main archive header.
+  2   File header.
+  3   Service header.
+  4   Archive encryption header.
+  5   End of archive header.*/
+    bool setStateHeader() override; //override ÷òîá áûëà ãàðàíòèÿ, ÷òî ïðîèçîéäåò îøèáêà, åñëè íå âèðòóàëüíàÿ ô-èÿ
 
-    bool setStateHeader() override;
+
+// ÷èòàòü ñëåäóþùèé áëîê îäíîãî èç 5 Types of archive header
     bool readNextBlock() override;
 
-    std::vector<char>::const_iterator getVIntegerIt();
-    vint_t getVInteger();
-    std::string getStrSizeOfData(vint_t);
+    /* vint èç ñïåöèôèêàöèè
+Variable length integer.
+Can include one or more bytes, where lower 7 bits of every byte contain integer data and highest bit in every byte is the continuation flag. If highest bit is 0, this is the last byte in sequence. So first byte contains 7 least significant bits of integer and continuation flag.
+Second byte, if present, contains next 7 bits and so on.*/
+    vint_t getVInteger(); //ýòà ôóíêöèÿ âûäàåò ðàçìåð
+
 };
 
 
-#endif  // INFORAR5_H
+#endif

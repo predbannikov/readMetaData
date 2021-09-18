@@ -12,3 +12,4 @@ readMetaData
 readMetaData.exe
 *.user.*
 qtcsettings*
+*.swp

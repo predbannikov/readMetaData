@@ -9,16 +9,11 @@
 
 
 class InfoArch {
-    std::string m_sFileName;
+    std::string FileName;
     std::ifstream file;
-    std::vector<char> vec;
-//    char *data;
     std::vector<char> data;
     std::string rar_version;
-    int cur_index = 0;
-    int32_t size_header;
-    int32_t header_type;
-    bool add_size = false;
+
     int size = 0;
 
 public:
@@ -27,28 +22,32 @@ public:
     }
     ~InfoArch() {
     }
+
+
     BaseRAR *rar;
-    bool open(std::string a_sFileName) {
-        m_sFileName = a_sFileName;
-        file.open(a_sFileName, std::ios::in | std::ios::out | std::ios::binary);
+    bool open(std::string FileName_1) {
+        FileName = FileName_1;
+        file.open(FileName_1, std::ios::in | std::ios::out | std::ios::binary);
         if(!file.is_open()) {
-            std::cout << "error open file " << a_sFileName << std::endl;
+            std::cout << "error open file " << FileName_1 << std::endl;
             return false;
         }
         std::streampos begin = file.tellg();
-        file.seekg(0, std::ios::end);
+        file.seekg(0, std::ios::end); // îòíîñèòåëüíî 0-âîé ïîçèöèè ïåðåøëè â êîíåö
         std::streampos end = file.tellg();
-        size = end-begin;
-        file.seekg(std::ios::beg);
-//        data = new char[size];
+        size = end-begin; //ðàçìåð âñåãî àðõèâà
+        file.seekg(std::ios::beg); // ïåðåøëè â íà÷àëî
+
         data.resize(size);
         file.read(&data[0], size);
+        // â data ïîìåñòèëè àðõèâ
         std::cout << "\nread " << data.size() << " bytes" << std::endl;
         file.close();
-        if(!checkArchive())
+        if(!checkArchive()) // åñëè íå ôîðìàòà RAR èëè RAR, íî íåñîâðåìåííîé âåðñèè 5.0
             return false;
         std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
-        init();
+        work();
+        delete rar;
         return true;
     }
 
@@ -58,32 +57,24 @@ public:
             rar_version = "RAR 5.0";
             rar = new InfoRAR5(data);
             return true;
-        } else if(std::equal(std::begin(InfoRAR4x::signature), std::end(InfoRAR4x::signature), data.data()))  {
+        } else if(std::equal(std::begin(InfoRAR4x::signature), std::end(InfoRAR4x::signature), data.data())) {
             rar_version = "RAR 4.x";
-            rar = new InfoRAR4x(data);
-            return true;
+            std::cout <<"unsupported " << rar_version << std::endl;
+            return false;
         }
         return false;
     }
 
-    void init() {
+    void work() {
 
-        // TODO запустить разбор в цикле
-        // читать readNextBlock
-        // пока не закончится файл
-        rar->readNextBlock();
-        rar->readNextBlock();
-        // ...
-    }
+        while(rar->readNextBlock()) {
 
-
-    void readMetaData() {
-
-
-
+        }
 
     }
+
+
+
 };
 
-#endif  // INFOARCH_H
-
+#endif

@@ -3,10 +3,10 @@
 const char InfoRAR4x::signature[7]  {0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x0};
 
 
-bool InfoRAR4x::setStateHeader()
-{
-    return bool();
+InfoRAR4x::InfoRAR4x(std::vector<char> &data_):BaseRAR(data_){
+
 }
+
 
 //bool InfoRAR4x::readMainHead() {
 //    int length = 7;                     // Для 7 байтной сигнатуры
@@ -79,7 +79,7 @@ bool InfoRAR4x::readNextBlock()
 //        }
 //    }
 
-    return true;
+    return false;
 }
 
 InfoRAR4x::~InfoRAR4x(){}
