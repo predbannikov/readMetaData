@@ -33,17 +33,17 @@ public:
             return false;
         }
         std::streampos begin = file.tellg();
-        file.seekg(0, std::ios::end); // îòíîñèòåëüíî 0-âîé ïîçèöèè ïåðåøëè â êîíåö
+        file.seekg(0, std::ios::end); 			// относительно 0-вой позиции перешли в конец
         std::streampos end = file.tellg();
-        size = end-begin; //ðàçìåð âñåãî àðõèâà
-        file.seekg(std::ios::beg); // ïåðåøëè â íà÷àëî
+        size = end-begin; 						// размер всего архива
+        file.seekg(std::ios::beg); 				// перешли в начало
 
         data.resize(size);
         file.read(&data[0], size);
-        // â data ïîìåñòèëè àðõèâ
+        // в data поместили архив
         std::cout << "\nread " << data.size() << " bytes" << std::endl;
         file.close();
-        if(!checkArchive()) // åñëè íå ôîðìàòà RAR èëè RAR, íî íåñîâðåìåííîé âåðñèè 5.0
+        if(!checkArchive()) // если не формата RAR или RAR, но несовременной версии 5.0
             return false;
         std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
         work();

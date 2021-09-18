@@ -11,10 +11,16 @@ int main(int argc, char* argv[])
         std::cout <<"Need a file!" << std::endl;
         return -1;
     }
-    if(!archive.open(argv[1]))
-    {
-        std::cerr << "exit program" << std::endl;
+    try {
+        if(!archive.open(argv[1]))
+        {
+            std::cerr << "exit program" << std::endl;
+        }
+    }  catch (...) {
+        std::cerr << "unknown error" << std::endl;
+        return -1;
     }
+
 
 
     return 0;

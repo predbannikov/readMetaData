@@ -1,38 +1,40 @@
 #include "InfoRAR5.h"
 const char InfoRAR5::signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR] {0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x1, 0x0};
 
-InfoRAR5::InfoRAR5(std::vector<char> &data_) : BaseRAR(data_){ // èíèöèàëèçèðóåì BaseRAR
-    pos = data->begin(); 	// â íà÷àëî àðõèâà
-    std::advance(pos, 8); 	//ïðîäâèæåíèå íà 8 áàéòîâ, òê óæå çíàåì âåðñèþ
+InfoRAR5::InfoRAR5(std::vector<char> &data_) : BaseRAR(data_){ // инициализируем BaseRAR
+    pos = data->begin(); 	// в начало архива
+    std::advance(pos, 8); 	// продвижение на 8 байтов, тк уже знаем версию
 }
 
 
 
 bool InfoRAR5::setStateHeader()
 {
-    typeHeader = getVInteger();
-    switch (typeHeader) {
-    case 1:
-        state = STATE_MAIN_HEADER;
-        return true;
-    case 2:
-        state = STATE_FILE_HEADER;
-        return true;
-    case 3:
-        std::cout << "this is service header" << std::endl;
-        return false;
-    case 4:
-        std::cout << "this is encryption header" << std::endl;
-        return false;
-    case 5:
-        state = STATE_END_OF_ARCHIVE;
-        return true;
-    default:
-        std::cout << "îøèáêà, ñëó÷èëîñü íåïðåäâèäåííîå" << std::endl;
-        throw;
-        return false;
-
-    }
+//    try {
+        typeHeader = getVInteger();
+        switch (typeHeader) {
+        case 1:
+            state = STATE_MAIN_HEADER;
+            return true;
+        case 2:
+            state = STATE_FILE_HEADER;
+            return true;
+        case 3:
+            std::cout << "this is service header" << std::endl;
+            state = STATE_SERVICE_HEADER;
+            return true;
+        case 4:
+            std::cout << "this is encryption header" << std::endl;
+            return false;
+        case 5:
+            state = STATE_END_OF_ARCHIVE;
+            return true;
+        default:
+            throw std::runtime_error("ошибка, случилось непредвиденное");
+        }
+//    }  catch (const std::exception& e) {
+//        std::cout << e.what() << std::endl;
+//    }
     return false;
 }
 
@@ -43,11 +45,11 @@ bool InfoRAR5::setStateHeader()
  */
 bool InfoRAR5::readNextBlock() {
     try {
-        uint32_t CRC_HEADER = *reinterpret_cast<const uint32_t*>(&*pos);//reinterpret_cast òê pos ðàçìåðà char
+        uint32_t CRC_HEADER = *reinterpret_cast<const uint32_t*>(&*pos);	// reinterpret_cast  тк pos размера char
         std::advance(pos,4);
-        size_header = getVInteger(); // ýòà ôóíêöèÿ âûäàåò ðàçìåð (êîììåíò èç InfoRAR5.h)
+        size_header = getVInteger(); 	// эта функция выдает размер (коммент из InfoRAR5.h)
 
-        if(!setStateHeader()) // åñëè íå îäèí èç òèïîâ, òî åñòü ïîïàëîñü èíîðîäíîå
+        if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
             return false;
 
 
@@ -108,7 +110,7 @@ bool InfoRAR5::readNextBlock() {
             break;
         }
         case STATE_FILE_HEADER: {
-#define EMPTY_SPACE_LEFT                5           ////ïðîñòî äëÿ âûðàâíèâàíèÿ ïðè ïå÷àòè
+#define EMPTY_SPACE_LEFT                5           ////просто для выравнивания при печати
 #define EMPTY_SPACE_AFTER_LEFT          45
 #define EMPTY_SPACE_RIGHT_NUMBER        7
             std::cout << "BLOCK FILE HEAD size = " << size_header << std::endl;
@@ -161,7 +163,7 @@ bool InfoRAR5::readNextBlock() {
             std::cout << std::endl;
 
             auto lambda = [](const char &byte) {
-                    return byte>31; // âñ¸ êðîìå íåïå÷àòàåìûõ ñèìâîëîâ (èç ASCII äî 31)
+                    return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
                 };
 
             if(header_flag & 0x01) {
@@ -186,14 +188,18 @@ bool InfoRAR5::readNextBlock() {
             std::cout << std::endl;
             break;
         }
+        case STATE_SERVICE_HEADER: {
+            // Этот заголовок не использует метот сжатия
+
+            break;
+        }
         case STATE_END_OF_ARCHIVE:
             return false;
         }
-    }  catch (...) {
-        std::cerr << "ERROR: [" << errno << "]" << "... êàêàÿ-òî îøèáêà" << std::endl;
+    } catch (const std::exception &e) {
+        std::cerr << "ERROR: [" << errno << "] " << e.what() << std::endl;		// ... какая-то ошибка
         return false;
     }
-
     return true;
 }
 
@@ -202,9 +208,9 @@ vint_t InfoRAR5::getVInteger() {
     for (uint shift=0; pos != data->end(); shift+=7)
     {
         uint8_t curByte = *pos;
-        pos++; 										// ïðèáàâëÿåì ðàçìåð char
-        result+=uint64_t(curByte & 0x7f)<<shift; 	//0x7f = 0111 1111
-        if ((curByte & 0x80)==0) { 					// ïðîâåðêà íà ñòàðøèé áèò "highest bit in every byte is the continuation flag. If highest bit is 0, this is the last byte in sequence. So first byte contains 7 least significant bits of integer and continuation flag"
+        pos++; 										// прибавляем размер char
+        result+=uint64_t(curByte & 0x7f)<<shift; 	// 0x7f = 0111 1111
+        if ((curByte & 0x80)==0) { 					// проверка на старший бит "highest bit in every byte is the continuation flag. If highest bit is 0, this is the last byte in sequence. So first byte contains 7 least significant bits of integer and continuation flag"
             return result;
         }
     }
