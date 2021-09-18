@@ -45,7 +45,7 @@ bool InfoRAR5::readNextBlock() {
     try {
         uint32_t CRC_HEADER = *reinterpret_cast<const uint32_t*>(&*pos);//reinterpret_cast òê pos ðàçìåðà char
         std::advance(pos,4);
-        sizeHeader = getVInteger(); // ýòà ôóíêöèÿ âûäàåò ðàçìåð (êîììåíò èç InfoRAR5.h)
+        size_header = getVInteger(); // ýòà ôóíêöèÿ âûäàåò ðàçìåð (êîììåíò èç InfoRAR5.h)
 
         if(!setStateHeader()) // åñëè íå îäèí èç òèïîâ, òî åñòü ïîïàëîñü èíîðîäíîå
             return false;
@@ -80,16 +80,21 @@ bool InfoRAR5::readNextBlock() {
             // ----------
             if(header_flags & 0x01) {
                 std::cout << "extra area: diff " << begin_header_pos - 1 + size_header - pos << std::endl;
-                std::cout << "size of record data starting from type " << getVInteger() << std::endl;
-                std::cout << "record type. " << getVInteger() << std::endl;
-                std::cout << "locator record: size " << getVInteger() << std::endl;
-                std::cout << "locator record: type " << getVInteger() << std::endl;
-                std::cout << "locator record: flags " << getVInteger() << std::endl;
-                std::cout << "locator record: quick open offset " << getVInteger() << std::endl;
-                std::cout << "locator record: recovery record offset " << getVInteger() << std::endl;
-//                std::copy_if(pos, pos +  header_extra_area_sizye, std::ostream_iterator<int>(std::cout), [](const char &byte) {
-//                    return byte>31;
-//                });
+                std::cout << "size of record data starting from TYPE " << getVInteger() << std::endl;
+                int type_main_header_extra = getVInteger();
+                if(type_main_header_extra & 0x01) {
+                    std::cout << "locator record: type " << type_main_header_extra << std::endl;
+
+                }
+                int record_flag = getVInteger();
+                std::cout << "record flag. " << record_flag << std::endl;
+                if(record_flag & 0x01) {
+                    std::cout << "Quick open record offset is present. " << getVInteger() << std::endl;
+                }
+                if(record_flag & 0x02) {
+                    std::cout << "Recovery record offset is present." << std::endl;
+                }
+
             }
             if(archive_flags & 0x02) {
                 std::cout << "number volume " << getVInteger() << std::endl;
@@ -98,23 +103,15 @@ bool InfoRAR5::readNextBlock() {
             int diff_pos = begin_header_pos - 1 + size_header - pos;
             std::cout << "diff " << diff_pos << std::endl;
             std::cout << "size_header = " << size_header << std::endl;
-            /*
-            std::copy_if(pos, pos + diff_pos, std::ostream_iterator<char>(std::cout), [](const char &byte) {
-                int tmp = (uint8_t)byte;
-                return (uint)tmp>31;
-            });
-            */
             std::cout << std::endl;
-            pos = begin_header_pos + size_header-1;
-//            std::advance(pos, size_header-1);
 
             break;
         }
         case STATE_FILE_HEADER: {
-    #define EMPTY_SPACE_LEFT                5           ////ïðîñòî äëÿ âûðàâíèâàíèÿ ïðè ïå÷àòè
-    #define EMPTY_SPACE_AFTER_LEFT          45
-    #define EMPTY_SPACE_RIGHT_NUMBER        7
-            std::cout << "BLOCK FILE HEAD size = " << sizeHeader << std::endl;
+#define EMPTY_SPACE_LEFT                5           ////ïðîñòî äëÿ âûðàâíèâàíèÿ ïðè ïå÷àòè
+#define EMPTY_SPACE_AFTER_LEFT          45
+#define EMPTY_SPACE_RIGHT_NUMBER        7
+            std::cout << "BLOCK FILE HEAD size = " << size_header << std::endl;
             vint_t header_flag = getVInteger();
             vint_t header_extra_area_size = getVInteger();
             vint_t header_data_size = getVInteger();
@@ -127,11 +124,11 @@ bool InfoRAR5::readNextBlock() {
 
             vint_t header_compression_info = getVInteger();
             vint_t header_host_os = getVInteger();
-        /*Flags specific for file header type:
-          0x0001   Directory file system object (file header only).
-          0x0002   Time field in Unix format is present.
-          0x0004   CRC32 field is present.
-          0x0008   Unpacked size is unknown.*/
+          /*Flags specific for file header type:
+            0x0001   Directory file system object (file header only).
+            0x0002   Time field in Unix format is present.
+            0x0004   CRC32 field is present.
+            0x0008   Unpacked size is unknown.*/
             if(header_file_flags & 0x1) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
             if(header_file_flags & 0x2) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
             if(header_file_flags & 0x4) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;

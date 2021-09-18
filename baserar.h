@@ -19,8 +19,7 @@ class BaseRAR {
 public:
     STATE_HEADER state = STATE_MARKER_HEADER;
     size_t seek;
-    size_t sizeHeader;
-    size_t typeHeader;
+    size_t type_header;
     const std::vector<char> *data;
 
     std::ios_base::fmtflags defFlags;

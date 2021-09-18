@@ -3,7 +3,7 @@
 #include "baserar.h"
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
-#define MAX_SHOW_NUMBER_DATA_HEADER 5
+#define MAX_SHOW_NUMBER_DATA_HEADER 			5
 
 using vint_t = uint64_t;
 
