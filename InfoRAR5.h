@@ -19,7 +19,10 @@ struct ExtraArea {
     vint_t size;
 };
 
-struct Header {
+class Header {
+public:
+    Header();
+    void update();
     struct ExtraData {
         vint_t offset;
         vint_t size_data;
@@ -68,7 +71,7 @@ class InfoRAR5 : public BaseRAR{
     void printDataArea();
     void printName();
     std::map<uint32_t, Header*> map;
-    Header *header;
+    Header *header = nullptr;
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 

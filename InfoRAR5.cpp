@@ -336,7 +336,11 @@ bool InfoRAR5::readNextBlock() {
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 
            //----------------------------
-            printName();
+//            printName();
+
+//            header->name.print();
+            header->update();
+//            header->notifyUpdate();
           //-------------------------------------------------
             parseExtraArea();
             printDataArea();
@@ -366,4 +370,13 @@ vint_t InfoRAR5::getVInteger() {
         }
     }
     throw std::runtime_error("the size vint exceeded bounds");
+}
+
+Header::Header() {
+//    addObserver(&name);
+}
+
+void Header::update()
+{
+    name.update();
 }
