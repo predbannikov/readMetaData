@@ -17,7 +17,6 @@ enum STATE_HEADER {STATE_MARKER_HEADER = 0, STATE_MAIN_HEADER = 1, STATE_FILE_HE
 
 class BaseRAR {
 public:
-    STATE_HEADER state = STATE_MARKER_HEADER;
     size_t seek;
     size_t type_header;
     const std::vector<char> *data;

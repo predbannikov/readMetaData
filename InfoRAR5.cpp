@@ -1,4 +1,4 @@
-﻿#include "InfoRAR5.h"
+#include "InfoRAR5.h"
 #define EMPTY_SPACE_LEFT                5           ////просто для выравнивания при печати
 #define EMPTY_SPACE_AFTER_LEFT          45
 #define EMPTY_SPACE_RIGHT_NUMBER        7
@@ -15,22 +15,28 @@ InfoRAR5::InfoRAR5(std::vector<char> &data_) : BaseRAR(data_){ // инициал
             0x0008   Unpacked size is unknown.*/
 void InfoRAR5::printFlagSpec()
 {
-    if(header->flags_common & 0x1) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
-    if(header->flags_common & 0x2) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
-    if(header->flags_common & 0x4) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
-    if(header->flags_common & 0x8) std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
+    if(header->flags_common & 0x1)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
+    if(header->flags_common & 0x2)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
+    if(header->flags_common & 0x4)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
+    if(header->flags_common & 0x8)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
 }
 
 void InfoRAR5::printCRCData()
 {
     if(header->flags_specific & 0x04)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->crc_data << std::dec << std::endl;
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:"
+            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->crc_data << std::dec << std::endl;
 }
 
 void InfoRAR5::printCompresMethod()
 {
     std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
+    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: "
+            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 }
 
 void InfoRAR5::printDataArea()
@@ -40,7 +46,8 @@ void InfoRAR5::printDataArea()
             return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
         };
         std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Data area:" << std::endl;
-        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data) << std::endl;
+        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
+            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data) << std::endl;
         std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
         auto data_size_it_loc = pos + header->size_data;
         if(MAX_SHOW_NUMBER_DATA_HEADER < header->size_data) {
@@ -54,10 +61,29 @@ void InfoRAR5::printDataArea()
     }
 }
 
+void InfoRAR5::printName()
+{
+    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << header->name.data << std::endl;
+    if(header->state == STATE_SERVICE_HEADER) {
+        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
+        if(header->name.data == "QO")
+            std::cout << "Archive quick open data" << std::endl;
+        else if(header->name.data == "CMT")
+            std::cout << "Archive comment";
+        else if(header->name.data == "ACL")
+            std::cout << "NTFS file permissions";
+        else if(header->name.data == "STM")
+            std::cout << "NTFS alternate data stream";
+        else if(header->name.data == "RR")
+            std::cout << "Recovery record";
+    }
+}
+
 void InfoRAR5::parseExtraArea()
 {
     std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area) << std::endl;
+    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
+        << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area) << std::endl;
 
     if(header->flags_common & 0x01) {
         int size_extra = getVInteger();
@@ -65,7 +91,7 @@ void InfoRAR5::parseExtraArea()
         auto pos_save = pos;
         int type_extra = getVInteger();
         std::cout << "type_extra " << type_extra << std::endl;
-        switch (state) {
+        switch (header->state) {
         case STATE_MAIN_HEADER: {
             if(type_extra == 0x01)
                 std::cout << "locator record: type " << std::endl;
@@ -77,8 +103,6 @@ void InfoRAR5::parseExtraArea()
             if(record_flag & 0x02) {
                 std::cout << "Recovery record offset is present. " << getVInteger() << std::endl;
             }
-
-
             break;
         }
         case STATE_FILE_HEADER:
@@ -113,7 +137,6 @@ void InfoRAR5::parseExtraArea()
                     else {
                         throw std::runtime_error("In file time record: time determine error");
                     }
-
                 break;
             }
             case 0x04:
@@ -132,8 +155,11 @@ void InfoRAR5::parseExtraArea()
 
 void InfoRAR5::getName()
 {
-    header->name.insert(header->name.end(), pos, pos+header->length_name);
-    std::advance(pos, header->length_name);
+//    header->name.insert(header->name.end(), pos, pos+header->length_name);
+    header->name.it = pos;
+    header->name.data.insert(header->name.data.end(), pos, pos + header->name.length);
+//    std::advance(pos, header->length_name);
+    std::advance(pos, header->name.length);
 }
 
 void InfoRAR5::getGetCRCDate()
@@ -148,7 +174,8 @@ void InfoRAR5::getFileModifTime()
 {
     if(header->flags_specific & 0x02)  {
         uint32_t header_mtime = *reinterpret_cast<const uint32_t*>(&*pos);
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Modification time in Unix time format:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_mtime) << std::endl;
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Modification time in Unix time format:"
+            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_mtime) << std::endl;
         std::advance(pos, 4);
     }
 }
@@ -182,32 +209,48 @@ void InfoRAR5::printHostCreator()
         std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "WINDOWS used to create this archive." << std::endl;
 }
 
+void InfoRAR5::printFlagComm()
+{
+    if(header->flags_common & 0x01)
+        std::cout << "Extra area is present in the end of header." << std::endl;
+    else if(header->flags_common & 0x02)
+        std::cout << "Data area is present in the end of header." << std::endl;
+    else if(header->flags_common & 0x04)
+        std::cout << "Blocks with unknown type and this flag must be skipped when updating an archive." << std::endl;
+    else if(header->flags_common & 0x08)
+        std::cout << "Data area is continuing from previous volume." << std::endl;
+    else if(header->flags_common & 0x10)
+        std::cout << "Data area is continuing in next volume." << std::endl;
+    else if(header->flags_common & 0x20)
+        std::cout << "Block depends on preceding file block." << std::endl;
+    else if(header->flags_common & 0x40)
+        std::cout << "Preserve a child block if host block is modified." << std::endl;
+}
+
 bool InfoRAR5::setStateHeader()
 {
     header->type = getVInteger();
     switch (header->type) {
     case 1:
-        state = STATE_MAIN_HEADER;
+        header->state = STATE_MAIN_HEADER;
         return true;
     case 2:
-        state = STATE_FILE_HEADER;
+        header->state = STATE_FILE_HEADER;
         return true;
     case 3:
-        state = STATE_SERVICE_HEADER;
+        header->state = STATE_SERVICE_HEADER;
         return true;
     case 4:
         std::cout << "this is encryption header" << std::endl;
         return false;
     case 5:
-        state = STATE_END_OF_ARCHIVE;
+        header->state = STATE_END_OF_ARCHIVE;
         return true;
     default:							// ошибка, случилось непредвиденное
         throw std::runtime_error("this value of typeHeder not match any type");
     }
     return false;
 }
-
-
 
 /*
  *   READ HEADER BLOCK
@@ -223,7 +266,7 @@ bool InfoRAR5::readNextBlock() {
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
             return false;
 
-        switch (state) {
+        switch (header->state) {
         case STATE_MARKER_HEADER:
             break;
         case STATE_MAIN_HEADER:{
@@ -248,6 +291,7 @@ bool InfoRAR5::readNextBlock() {
                 std::cout << "Lecked archive" << std::endl;
             }
             // ----------
+            printFlagComm();
             parseExtraArea();
             if(archive_flags & 0x02) {
                 std::cout << "number volume " << getVInteger() << std::endl;
@@ -271,24 +315,22 @@ bool InfoRAR5::readNextBlock() {
             getGetCRCDate();
             header->compres_info = getVInteger();
             header->host_os_creator = getVInteger();
-            header->length_name = getVInteger();
+            header->name.length = getVInteger();
+            getName();		// перенести на извлечение данных выше TODO
+//            header->length_name = getVInteger();
             // ------------ area print specific header data --------------------
             printHostCreator();
             printFlagSpec();
-
-
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size) << std::endl;
-
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes) << std::endl;
             printCRCData();
+            printCompresMethod();
+            printFlagComm();
+            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size) << std::endl;
+            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes) << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 
-            printCompresMethod();
            //----------------------------
-            getName();
-
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << header->name << std::endl;
+            printName();
           //-------------------------------------------------
             parseExtraArea();
             printDataArea();
@@ -300,28 +342,33 @@ bool InfoRAR5::readNextBlock() {
             std::cout << "BLOCK SERVICE HEAD size = " << header->size_header << std::endl;
             header->flags_common = getVInteger();
             getExtraAreaSize();
-            header->size_data = getVInteger();
+            getSizeData();
             header->flags_specific = getVInteger();
-            header->unpack_size = getVInteger();
+            getUnpackSize();
             header->attributes = getVInteger();
             getFileModifTime();
             getGetCRCDate();
             header->compres_info = getVInteger();
             header->host_os_creator = getVInteger();
-
+            header->name.length = getVInteger();
+//            header->length_name = getVInteger();
+            // ------------ area print specific header data --------------------
             printHostCreator();
             printFlagSpec();
+            printCRCData();
+            printCompresMethod();
+            printFlagComm();
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size) << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes) << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->crc_data << std::dec << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 
-//            header->offset = getVInteger();
-//            header->size_data = getVInteger();
-//            std::cout << header->flags_comm << std::endl;
-//            std::cout << header->offset << std::endl;
-//            std::cout << header->size_data << std::endl;
+           //----------------------------
+            getName();
+            printName();
+            parseExtraArea();
+            printDataArea();
+            std::cout << std::endl;
 
             break;
         }

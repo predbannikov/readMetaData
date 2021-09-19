@@ -4,16 +4,26 @@
 #include <map>
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
-#define MAX_SHOW_NUMBER_DATA_HEADER 			0x4F
+#define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
 using vint_t = uint64_t;
+
+struct Name {
+    std::vector<char>::const_iterator it;
+    std::string data;
+    vint_t length;
+};
+
+struct ExtraArea {
+    std::vector<char>::const_iterator it;
+    vint_t size;
+};
 
 struct Header {
     struct ExtraData {
         vint_t offset;
         vint_t size_data;
     };
-
     vint_t size_data;
     vint_t size_header;		//Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
     vint_t type;
@@ -27,10 +37,13 @@ struct Header {
     uint32_t crc_data;
     vint_t compres_info;
     vint_t host_os_creator;
-    vint_t length_name;
 
-    std::string name;
+//    vint_t length_name;
+//    std::string name;
 
+    Name name;
+
+    STATE_HEADER state = STATE_MARKER_HEADER;
     /* If flag 0x0008 is set, unpacked size field is still present,
      * but must be ignored and extraction must be performed until reaching the end of compression stream.
      * This flag can be set if actual file size is larger than reported by OS or if file size is unknown
@@ -48,10 +61,12 @@ class InfoRAR5 : public BaseRAR{
     void getUnpackSize();
     void getName();
     void printHostCreator();
+    void printFlagComm();
     void printFlagSpec();
     void printCRCData();
     void printCompresMethod();
     void printDataArea();
+    void printName();
     std::map<uint32_t, Header*> map;
     Header *header;
 public:
