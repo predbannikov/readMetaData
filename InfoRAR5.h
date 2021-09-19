@@ -1,18 +1,18 @@
 #ifndef INFORAR5_H
 #define INFORAR5_H
 #include "baserar.h"
+#include "extractor.h"
 #include <map>
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
-using vint_t = uint64_t;
 
-struct Name {
-    std::vector<char>::const_iterator it;
-    std::string data;
-    vint_t length;
-};
+//struct Name {
+//    std::vector<char>::const_iterator it;
+//    std::string data;
+//    vint_t length;
+//};
 
 struct ExtraArea {
     std::vector<char>::const_iterator it;
@@ -40,8 +40,8 @@ struct Header {
 
 //    vint_t length_name;
 //    std::string name;
-
     Name name;
+
 
     STATE_HEADER state = STATE_MARKER_HEADER;
     /* If flag 0x0008 is set, unpacked size field is still present,

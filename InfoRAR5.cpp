@@ -63,18 +63,21 @@ void InfoRAR5::printDataArea()
 
 void InfoRAR5::printName()
 {
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << header->name.data << std::endl;
+    std::string str(header->name.length, ' ');
+    std::copy(header->name.begin, header->name.end, str.begin());	//;
+
+    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
     if(header->state == STATE_SERVICE_HEADER) {
         std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
-        if(header->name.data == "QO")
+        if(str == "QO")
             std::cout << "Archive quick open data" << std::endl;
-        else if(header->name.data == "CMT")
+        else if(str == "CMT")
             std::cout << "Archive comment";
-        else if(header->name.data == "ACL")
+        else if(str == "ACL")
             std::cout << "NTFS file permissions";
-        else if(header->name.data == "STM")
+        else if(str == "STM")
             std::cout << "NTFS alternate data stream";
-        else if(header->name.data == "RR")
+        else if(str == "RR")
             std::cout << "Recovery record";
     }
 }
@@ -156,10 +159,11 @@ void InfoRAR5::parseExtraArea()
 void InfoRAR5::getName()
 {
 //    header->name.insert(header->name.end(), pos, pos+header->length_name);
-    header->name.it = pos;
-    header->name.data.insert(header->name.data.end(), pos, pos + header->name.length);
+//    header->name.it = pos;
+    header->name.extract(pos);
+//    header->name.data.insert(header->name.data.end(), pos, pos + header->name.length);
 //    std::advance(pos, header->length_name);
-    std::advance(pos, header->name.length);
+//    std::advance(pos, header->name.length);
 }
 
 void InfoRAR5::getGetCRCDate()
@@ -233,12 +237,15 @@ bool InfoRAR5::setStateHeader()
     switch (header->type) {
     case 1:
         header->state = STATE_MAIN_HEADER;
+        std::cout << "BLOCK MAIN HEAD size = " << header->size_header<< std::endl;
         return true;
     case 2:
         header->state = STATE_FILE_HEADER;
+        std::cout << "BLOCK FILE HEAD size = " << header->size_header << std::endl;
         return true;
     case 3:
         header->state = STATE_SERVICE_HEADER;
+        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header << std::endl;
         return true;
     case 4:
         std::cout << "this is encryption header" << std::endl;
@@ -270,7 +277,6 @@ bool InfoRAR5::readNextBlock() {
         case STATE_MARKER_HEADER:
             break;
         case STATE_MAIN_HEADER:{
-            std::cout << "BLOCK MAIN HEAD size = " << header->size_header<< std::endl;
             auto begin_header_pos = pos;
             header->flags_common = getVInteger();
             if(header->flags_common & 0x01) {
@@ -303,8 +309,8 @@ bool InfoRAR5::readNextBlock() {
 
             break;
         }
-        case STATE_FILE_HEADER: {
-            std::cout << "BLOCK FILE HEAD size = " << header->size_header << std::endl;
+        case STATE_FILE_HEADER:            // Этот заголовок не использует метот сжатия
+        case STATE_SERVICE_HEADER:
             header->flags_common = getVInteger();
             getExtraAreaSize();
             getSizeData();
@@ -315,7 +321,7 @@ bool InfoRAR5::readNextBlock() {
             getGetCRCDate();
             header->compres_info = getVInteger();
             header->host_os_creator = getVInteger();
-            header->name.length = getVInteger();
+//            header->name.length = getVInteger();
             getName();		// перенести на извлечение данных выше TODO
 //            header->length_name = getVInteger();
             // ------------ area print specific header data --------------------
@@ -336,42 +342,8 @@ bool InfoRAR5::readNextBlock() {
             printDataArea();
             std::cout << std::endl;
             break;
-        }
-        case STATE_SERVICE_HEADER: {
-            // Этот заголовок не использует метот сжатия
-            std::cout << "BLOCK SERVICE HEAD size = " << header->size_header << std::endl;
-            header->flags_common = getVInteger();
-            getExtraAreaSize();
-            getSizeData();
-            header->flags_specific = getVInteger();
-            getUnpackSize();
-            header->attributes = getVInteger();
-            getFileModifTime();
-            getGetCRCDate();
-            header->compres_info = getVInteger();
-            header->host_os_creator = getVInteger();
-            header->name.length = getVInteger();
-//            header->length_name = getVInteger();
-            // ------------ area print specific header data --------------------
-            printHostCreator();
-            printFlagSpec();
-            printCRCData();
-            printCompresMethod();
-            printFlagComm();
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size) << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes) << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 
-           //----------------------------
-            getName();
-            printName();
-            parseExtraArea();
-            printDataArea();
-            std::cout << std::endl;
 
-            break;
-        }
         case STATE_END_OF_ARCHIVE:
             return false;
         }
