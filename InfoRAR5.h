@@ -1,19 +1,59 @@
 #ifndef INFORAR5_H
 #define INFORAR5_H
 #include "baserar.h"
+#include <map>
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
-#define MAX_SHOW_NUMBER_DATA_HEADER 			5
+#define MAX_SHOW_NUMBER_DATA_HEADER 			0x4F
 
 using vint_t = uint64_t;
 
+struct Header {
+    struct ExtraData {
+        vint_t offset;
+        vint_t size_data;
+    };
+
+    vint_t size_data;
+    vint_t size_header;		//Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
+    vint_t type;
+    vint_t flags_common;
+    vint_t size_extra_area;
+    vint_t flags_specific;
+    vint_t volume_number;
+    vint_t unpack_size;;
+    vint_t attributes;
+    vint_t offset;
+    uint32_t crc_data;
+    vint_t compres_info;
+    vint_t host_os_creator;
+    vint_t length_name;
+
+    std::string name;
+
+    /* If flag 0x0008 is set, unpacked size field is still present,
+     * but must be ignored and extraction must be performed until reaching the end of compression stream.
+     * This flag can be set if actual file size is larger than reported by OS or if file size is unknown
+     * such as for all volumes except last when archiving from stdin to multivolume archive.
+     */
+    bool ignorUnpackSize = false;
+};
+
 class InfoRAR5 : public BaseRAR{
-    vint_t size_header;
-    vint_t typeHeader;
-    vint_t flagHeader;
-    vint_t extraAreaSize;
-    vint_t archiveFlags;
-    vint_t volumeNumber;
+    void parseExtraArea();
+    void getGetCRCDate();
+    void getFileModifTime();
+    void getExtraAreaSize();
+    void getSizeData();
+    void getUnpackSize();
+    void getName();
+    void printHostCreator();
+    void printFlagSpec();
+    void printCRCData();
+    void printCompresMethod();
+    void printDataArea();
+    std::map<uint32_t, Header*> map;
+    Header *header;
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
