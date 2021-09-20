@@ -335,13 +335,9 @@ bool InfoRAR5::readNextBlock() {
             std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info & 0x0380) << std::endl;
 
-           //----------------------------
-//            printName();
+            header->display();
 
-//            header->name.print();
-            header->update();
-//            header->notifyUpdate();
-          //-------------------------------------------------
+
             parseExtraArea();
             printDataArea();
             std::cout << std::endl;
@@ -375,8 +371,27 @@ vint_t InfoRAR5::getVInteger() {
 Header::Header() {
 //    addObserver(&name);
 }
-
-void Header::update()
+#define SPACE_LEFT_AREA		38
+void Header::display()
 {
-    name.update();
+    std::string sname(SPACE_LEFT_AREA,' ');
+//    name.setString(sname);
+    std::copy(name.begin, name.end, sname.begin());
+
+    std::cout << name.length << std::endl;
+
+    std::cout << "┌──────────────────────────────────────┐┌────────────────────────────────────\n" //0
+        "│                                      ││"  << sname.substr(0, SPACE_LEFT_AREA) << "\n" //1
+        "│         ││         │\n" //2
+        "│         ││         │\n" //3
+        "│         │├─────────┤\n" //4
+        "│         ││         │\n" //5
+        "│         ││         │\n" //6
+        "│         ││         │\n" //7
+        "│         ││         │\n" //8
+        "└─────────┘└─────────┘\n" //9
+        "┌────────────────────┐\n" //10
+        "│                    │\n" //11
+        "└────────────────────┘";  //12
+
 }

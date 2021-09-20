@@ -22,7 +22,7 @@ struct ExtraArea {
 class Header {
 public:
     Header();
-    void update();
+    void display();
     struct ExtraData {
         vint_t offset;
         vint_t size_data;

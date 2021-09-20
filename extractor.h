@@ -11,11 +11,11 @@ using vint_t = uint64_t;
 #include <vector>
 
 /* Класс для View объектов, получает уведомления если необходимо перерисовать объект*/
-class Observer
-{
-public:
-    virtual void update() = 0;
-};
+//class Observer
+//{
+//public:
+//    virtual void getString() = 0;
+//};
 
 /* Класс для модели, где будут храниться все данные и алгоритмы */
 //class Observable
@@ -47,12 +47,13 @@ public:
     vint_t getVInteger(std::vector<char>::const_iterator &it);
 };
 
-class Name : public Extractor, public Observer{
+class Name : public Extractor{
 public:
     Name();
     vint_t length;
     void extract(std::vector<char>::const_iterator &it, size_t len = 0) override;
-    void update();
+//    std::string getString();
+    void setString(std::string &str);
 
 };
 
