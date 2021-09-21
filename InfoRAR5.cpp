@@ -357,7 +357,7 @@ bool InfoRAR5::readNextBlock() {
 
 vint_t InfoRAR5::getVInteger() {
     vint_t result=0;
-    for (uint shift=0; pos != data->end(); shift+=7)
+    for (uint8_t shift=0; pos != data->end(); shift+=7)
     {
         uint8_t curByte = *pos;
         pos++; 										// прибавляем размер char

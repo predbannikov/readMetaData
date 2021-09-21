@@ -71,7 +71,7 @@ vint_t Extractor::getVInteger(std::vector<char>::const_iterator &pos) {
     try {
         vint_t result=0;
         std::vector<char>::const_iterator end = pos + 10;
-        for (uint shift=0; pos != end; shift+=7)
+        for (uint8_t shift=0; pos != end; shift+=7)
         {
             uint8_t curByte = *pos;
             pos++; 										// прибавляем размер char
