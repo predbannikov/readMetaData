@@ -237,15 +237,15 @@ bool InfoRAR5::setStateHeader()
     switch (header->type) {
     case 1:
         header->state = STATE_MAIN_HEADER;
-        std::cout << "BLOCK MAIN HEAD size = " << header->size_header<< std::endl;
+        std::cout << "BLOCK MAIN HEAD size = " << header->size_header_.get()<< std::endl;
         return true;
     case 2:
         header->state = STATE_FILE_HEADER;
-        std::cout << "BLOCK FILE HEAD size = " << header->size_header << std::endl;
+        std::cout << "BLOCK FILE HEAD size = " << header->size_header_.get() << std::endl;
         return true;
     case 3:
         header->state = STATE_SERVICE_HEADER;
-        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header << std::endl;
+        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header_.get() << std::endl;
         return true;
     case 4:
         std::cout << "this is encryption header" << std::endl;
@@ -268,7 +268,8 @@ bool InfoRAR5::readNextBlock() {
         header = new Header;
         map[*reinterpret_cast<const uint32_t*>(&*pos)] = header;	// reinterpret_cast  тк pos размера char  CRC
         std::advance(pos,4);
-        header->size_header = getVInteger(); 	// эта функция выдает размер (коммент из InfoRAR5.h)
+//        header->size_header = getVInteger(); 	// эта функция выдает размер (коммент из InfoRAR5.h)
+        header->size_header_.extract(pos);
 
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
             return false;
@@ -303,7 +304,7 @@ bool InfoRAR5::readNextBlock() {
                 std::cout << "number volume " << getVInteger() << std::endl;
             }
             std::cout << std::endl;
-            int diff_pos = begin_header_pos - 1 + header->size_header- pos;
+            int diff_pos = begin_header_pos - 1 + header->size_header_.get() - pos;
             std::cout << "diff " << diff_pos << std::endl;
             std::cout << std::endl;
 
@@ -375,20 +376,14 @@ Header::Header() {
 void Header::display()
 {
     std::string sname(SPACE_LEFT_AREA,' ');
-//    name.setString(sname);
-    std::copy(name.begin, name.end, sname.begin());
+    name.fillString(sname, SPACE_LEFT_AREA);
+//    std::copy(name.begin, name.end, sname.begin());
 
     std::cout << name.length << std::endl;
 
     std::cout << "┌──────────────────────────────────────┐┌────────────────────────────────────\n" //0
         "│                                      ││"  << sname.substr(0, SPACE_LEFT_AREA) << "\n" //1
         "│         ││         │\n" //2
-        "│         ││         │\n" //3
-        "│         │├─────────┤\n" //4
-        "│         ││         │\n" //5
-        "│         ││         │\n" //6
-        "│         ││         │\n" //7
-        "│         ││         │\n" //8
         "└─────────┘└─────────┘\n" //9
         "┌────────────────────┐\n" //10
         "│                    │\n" //11

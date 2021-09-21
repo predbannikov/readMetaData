@@ -39,17 +39,28 @@ using vint_t = uint64_t;
 
 
 
-class Extractor {
+struct Extractor {
+    enum TYPE_VARIABLE {TYPE_STRING, TYPE_VINT } type;
 public:
+    vint_t vtmp;
+    std::string stmp;
     std::vector<char>::const_iterator begin;
     std::vector<char>::const_iterator end;
+    std::vector<char>::const_iterator itmp;
     virtual void extract(std::vector<char>::const_iterator &it, size_t length = 0) = 0;
+    void fillString(std::string &str, size_t length);
     vint_t getVInteger(std::vector<char>::const_iterator &it);
 };
 
-class Name : public Extractor{
-public:
-    Name();
+struct SizeData : public Extractor{
+    SizeData() { type = TYPE_VINT; }
+    uint64_t get();
+    vint_t size;
+    void extract(std::vector<char>::const_iterator &it, size_t len = 0) override;
+};
+
+struct Name : public Extractor{
+    Name() { type = TYPE_STRING; }
     vint_t length;
     void extract(std::vector<char>::const_iterator &it, size_t len = 0) override;
 //    std::string getString();

@@ -1,11 +1,8 @@
+
 #include "extractor.h"
 #include <stdexcept>
 #include <iomanip>
 #include <iostream>
-
-Name::Name() {
-
-}
 
 
 void Name::extract(std::vector<char>::const_iterator &it, size_t len)
@@ -50,6 +47,26 @@ void Name::setString(std::string &str)
 //    std::copy(begin, end, str.begin());
 }
 
+void Extractor::fillString(std::string &str, size_t length)
+{
+    str.clear();
+    str.resize(length, ' ');
+    int len = 0;
+    switch (type) {
+    case TYPE_VINT:
+        itmp = begin;
+        vtmp = getVInteger(itmp);
+        stmp.clear();
+        stmp = std::to_string(vtmp);
+        std::copy(stmp.begin(), stmp.end(), str.begin());
+        break;
+    case TYPE_STRING:
+        len = end - begin < length ? end - begin : length;
+        std::copy(begin, begin + len, str.begin());
+        break;
+    }
+}
+
 vint_t Extractor::getVInteger(std::vector<char>::const_iterator &pos) {
     try {
         vint_t result=0;
@@ -67,4 +84,18 @@ vint_t Extractor::getVInteger(std::vector<char>::const_iterator &pos) {
     }  catch (...) {
         throw std::runtime_error("the size vint exceeded bounds");
     }
+}
+
+uint64_t SizeData::get()
+{
+    itmp = begin;
+    vtmp = getVInteger(itmp);
+    return vtmp;
+}
+
+void SizeData::extract(std::vector<char>::const_iterator &it, size_t len)
+{
+    begin = it;
+    size = getVInteger(it);
+    end = it;
 }
