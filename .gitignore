@@ -1,7 +1,6 @@
 *.prev
 *.rar
 Testing/
-*.txt
 .txt
 CMakeFiles/
 .cmake/
