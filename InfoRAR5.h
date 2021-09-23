@@ -28,7 +28,7 @@ public:
         vint_t size_data;
     };
     vint_t size_data;
-//    vint_t size_header;		//Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
+    vint_t size_header;		//Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
     vint_t type;
     vint_t flags_common;
     vint_t size_extra_area;
@@ -41,10 +41,10 @@ public:
     vint_t compres_info;
     vint_t host_os_creator;
 
-//    vint_t length_name;
-//    std::string name;
-    Name name;
-    SizeData size_header_;
+    vint_t length_name;
+    std::string name;
+//    Name name;
+//    SizeData size_header_;
 
 
     STATE_HEADER state = STATE_MARKER_HEADER;
