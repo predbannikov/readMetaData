@@ -7,7 +7,7 @@
 class InfoRAR4x : public BaseRAR{
 public:
     static const char signature[7];
-    InfoRAR4x(std::vector<char> &data_);
+    InfoRAR4x(std::fstream &file_);
 
     //************* MAIN HEADER *************//
     //bool readMainHead() override;

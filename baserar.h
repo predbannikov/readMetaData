@@ -5,7 +5,7 @@
 #include <iterator>
 #include <iomanip>
 #include <algorithm>
-
+#include <fstream>
 
 
 
@@ -19,11 +19,12 @@ class BaseRAR {
 public:
     size_t seek;
     size_t type_header;
-    const std::vector<char> *data;
-
-    std::ios_base::fmtflags defFlags;
-    BaseRAR(const std::vector<char> &data_) : data(&data_){
-        defFlags = std::cout.flags();
+    std::vector<char> *data;
+    std::fstream *file;
+	std::streampos end;
+	
+    BaseRAR(std::fstream &file1): file(&file1){
+        end=file->tellg();
 //
         seek = 7;
     };

@@ -7,12 +7,26 @@
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
+struct TypeData
+{
+    std::streampos begin;
+    std::streampos end;
+    size_t length;
+    std::vector<char> buff;
+};
+struct TypeVInt
+{
+    std::streampos begin;
+    std::streampos end;
+    uint64_t number;
 
-//struct Name {
-//    std::vector<char>::const_iterator it;
-//    std::string data;
-//    vint_t length;
-//};
+};
+struct TypeInt32
+{
+    std::streampos begin;
+    std::streampos end;
+    uint32_t number;
+};
 
 struct ExtraArea {
     std::vector<char>::const_iterator it;
@@ -27,25 +41,22 @@ public:
         vint_t offset;
         vint_t size_data;
     };
-    vint_t size_data;
-    vint_t size_header;		//Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
-    vint_t type;
-    vint_t flags_common;
-    vint_t size_extra_area;
-    vint_t flags_specific;
-    vint_t volume_number;
-    vint_t unpack_size;
-    vint_t attributes;
-    vint_t offset;
-    uint32_t crc_data;
-    vint_t compres_info;
-    vint_t host_os_creator;
 
-    vint_t length_name;
-    std::string name;
-//    Name name;
-//    SizeData size_header_;
-
+    TypeVInt size_data;
+    TypeVInt size_header;    //Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
+    TypeVInt type;
+    TypeVInt flags_common;
+    TypeVInt size_extra_area;
+    TypeVInt flags_specific;
+    TypeVInt volume_number;
+    TypeVInt unpack_size;
+    TypeVInt attributes;
+    TypeInt32 unpacked_crc;
+    TypeVInt compres_info;
+    TypeVInt host_os_creator;
+    TypeVInt length_name;
+    TypeData name;
+    TypeData package_data;
 
     STATE_HEADER state = STATE_MARKER_HEADER;
     /* If flag 0x0008 is set, unpacked size field is still present,
@@ -56,9 +67,14 @@ public:
     bool ignorUnpackSize = false;
 };
 
+
+
+
+
+
 class InfoRAR5 : public BaseRAR{
     void parseExtraArea();
-    void getGetCRCDate();
+    void extractCRCData();
     void getFileModifTime();
     void getExtraAreaSize();
     void getSizeData();
@@ -71,12 +87,20 @@ class InfoRAR5 : public BaseRAR{
     void printCompresMethod();
     void printDataArea();
     void printName();
+	
+    void extractVInteger(TypeVInt &vint_var);
+    void extractData(TypeData &data_var, size_t length);
+    void extractInt32(TypeInt32 &crc_var);
+    uint32_t extract32Int_();
+    uint64_t extract64Int_();
+
+	
     std::map<uint32_t, Header*> map;
     Header *header = nullptr;
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
-    InfoRAR5(std::vector<char> &data);
+    InfoRAR5(std::fstream &file);
     ~InfoRAR5();
 
     // выставляет состоянение переменной STATE_HEADER state
