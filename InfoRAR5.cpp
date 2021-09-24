@@ -42,6 +42,9 @@ void InfoRAR5::printCompresMethod()
 
 void InfoRAR5::printDataArea()
 {
+//    if(header->state == STATE_SERVICE_HEADER)
+//        std::cout << "stop" << std::endl;
+
     if(header->flags_common.number & 0x02) {
         auto lambda = [](const char &byte) {
             return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
@@ -137,8 +140,10 @@ uint32_t InfoRAR5::extract32Int_()
     //char tmp;
     for (int i=0; i<4; i++)
     {
+        if(header->state == STATE_SERVICE_HEADER)
+            std::cout << "stop" << std::endl;
         if(file->eof())
-            throw std::runtime_error("extract32Int error");
+            throw std::runtime_error("extract32Int_ error");
         file->read(&buff[i], 1);
         // file->read(&tmp, 1);
         // tmp2 |= (static_cast<uint32_t>(0xFF&tmp)) << 8*i;
@@ -165,39 +170,45 @@ uint64_t InfoRAR5::extract64Int_()
 
 void InfoRAR5::parseExtraArea()
 {
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
+    if(header->flags_common.number & 0x01) {
+
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
+        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
         << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area.number) << std::endl;
 
-    if(header->flags_common.number & 0x01) {
-        int size_extra = getVInteger();
-        std::cout << "size of record data starting from TYPE " << size_extra << std::endl;
-        auto pos_save = pos;
-        int type_extra = getVInteger();
-        std::cout << "type_extra " << type_extra << std::endl;
-        switch (header->state) {
-        case STATE_MAIN_HEADER: {
-            if(type_extra == 0x01)
-                std::cout << "locator record: type " << std::endl;
-            int record_flag = getVInteger();
-            std::cout << "record flag. " << record_flag << std::endl;
-            if(record_flag & 0x01) {
-                std::cout << "Quick open record offset is present. " << getVInteger() << std::endl; // TODO
-            }
-            if(record_flag & 0x02) {
-                std::cout << "Recovery record offset is present. " << getVInteger() << std::endl;
-            }
-            break;
-        }
-        case STATE_FILE_HEADER:
-        case STATE_SERVICE_HEADER:
-            switch (type_extra) {
-            case 0x01:
+
+        if(header->flags_common.number & 0x01) {
+            extractVInteger(header->extra.size);
+            std::cout << "size of record data starting from TYPE " << header->extra.size.number << std::endl;
+            //        auto pos_save = pos;
+            extractVInteger(header->extra.type);
+            std::cout << "type_extra " << header->extra.type.number << std::endl;
+            switch (header->state) {
+            case STATE_MAIN_HEADER: {
+                if(header->extra.type.number == 0x01)
+                    std::cout << "locator record: type " << std::endl;
+                //int record_flag = getVInteger();
+                extractVInteger(header->extra.locator.flags);
+                // std::cout << "record flag. " <<  << std::endl;
+                if( header->extra.locator.flags.number & 0x01) {
+                    extractVInteger(header->extra.locator.quick_open_offset);
+                    std::cout << "Quick open record offset is present. " << header->extra.locator.quick_open_offset.number << std::endl;
+                }
+                if( header->extra.locator.flags.number & 0x02) {
+                    extractVInteger(header->extra.locator.recovery_offset);
+                    std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
+                }
                 break;
-            case 0x02:
-                break;
-            case 0x03: {
-                vint_t flag = getVInteger();
+            }
+            case STATE_FILE_HEADER:
+            case STATE_SERVICE_HEADER:
+                switch (header->extra.type.number) {
+                case 0x01:
+                    break;
+                case 0x02:
+                    break;
+                case 0x03: {
+                    vint_t flag = getVInteger();
                     uint64_t mtime;		// time modification
                     uint64_t ctime;		// time creation
                     uint64_t atime;		// last access
@@ -215,29 +226,30 @@ void InfoRAR5::parseExtraArea()
                         std::cout << "atime = " << atime << std::endl;
                     }
 
-//                    if (flag & 0x0001)
-//                    {
-//                        // то Unix, значит всё extract 32 и возможна проверка на 10
-//                        mtime=
-//                    }
-//                    int diff = pos - pos_save;
-//                    if(diff == size_extra)
-//                        std::cout << "ok" << std::endl;
-//                    else {
-//                        throw std::runtime_error("In file time record: time determine error");
-//                    }
+                    //                    if (flag & 0x0001)
+                    //                    {
+                    //                        // то Unix, значит всё extract 32 и возможна проверка на 10
+                    //                        mtime=
+                    //                    }
+                    //                    int diff = pos - pos_save;
+                    //                    if(diff == size_extra)
+                    //                        std::cout << "ok" << std::endl;
+                    //                    else {
+                    //                        throw std::runtime_error("In file time record: time determine error");
+                    //                    }
+                    break;
+                }
+                case 0x04:
+                    break;
+                case 0x05:
+                    break;
+                case 0x06:
+                    break;
+                case 0x07:
+                    break;
+                }
                 break;
             }
-            case 0x04:
-                break;
-            case 0x05:
-                break;
-            case 0x06:
-                break;
-            case 0x07:
-                break;
-            }
-            break;
         }
     }
 }
@@ -288,13 +300,11 @@ void InfoRAR5::getExtraAreaSize()
 {
     if(header->flags_common.number & 0x01)
         extractVInteger(header->size_extra_area);
-//        header->size_extra_area = getVInteger();
 }
 
 void InfoRAR5::getSizeData()
 {
     if(header->flags_common.number & 0x02)
-        //header->size_data = getVInteger();
         extractVInteger(header->size_data);
 }
 
@@ -375,11 +385,7 @@ bool InfoRAR5::readNextBlock() {
 
         std::cout << std::hex << CRC << std::dec << std::endl;
 
-//        map[*reinterpret_cast<const uint32_t*>(&*pos)] = header;	// reinterpret_cast  тк pos размера char  CRC
-      //  std::advance(pos,4);
         extractVInteger(header->size_header);	// эта функция выдает размер (коммент из InfoRAR5.h)
-//            return false;
-//        header->size_header_.extract(pos);
 
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
             return false;
@@ -390,28 +396,31 @@ bool InfoRAR5::readNextBlock() {
         case STATE_MAIN_HEADER:{
             auto begin_header_pos = file->tellg();
             extractVInteger(header->flags_common);
-            if(header->flags_common.number & 0x01) {
-                std::cout << "archive is part of a multivolume" << std::endl;
-                //header->size_extra_area = getVInteger();
-                extractVInteger(header->size_extra_area);
-            }
-            vint_t archive_flags = getVInteger();
-            if(header->flags_common.number & 0x02) {
-                std::cout << "Volume number field is present" << std::endl;
-            }
-            if(header->flags_common.number & 0x04) {
-                std::cout << "Solid archive." << std::endl;
-            }
-            if(header->flags_common.number & 0x08) {
-                std::cout << "Recovery record is present." << std::endl;
-            }
-            if(header->flags_common.number & 0x10) {
-                std::cout << "Lecked archive" << std::endl;
-            }
+            getExtraAreaSize();
+
+//            if(header->flags_common.number & 0x01) {
+//                std::cout << "Extra area is present in the end of header." << std::endl;
+//                //header->size_extra_area = getVInteger();
+//                extractVInteger(header->size_extra_area);
+//            }
+//            vint_t archive_flags = getVInteger();
+            extractVInteger(header->flags_specific);  // = getVInteger();
+//            if(header->flags_common.number & 0x02) {
+//                std::cout << "Volume number field is present" << std::endl;
+//            }
+//            if(header->flags_common.number & 0x04) {
+//                std::cout << "Solid archive." << std::endl;
+//            }
+//            if(header->flags_common.number & 0x08) {
+//                std::cout << "Recovery record is present." << std::endl;
+//            }
+//            if(header->flags_common.number & 0x10) {
+//                std::cout << "Lecked archive" << std::endl;
+//            }
             // ----------
             printFlagComm();
             parseExtraArea();
-            if(archive_flags & 0x02) {
+            if(header->flags_specific.number & 0x02) {
                 extractVInteger(header->volume_number);
                 std::cout << "number volume " << header->volume_number.number << std::endl;
             }
@@ -425,25 +434,20 @@ bool InfoRAR5::readNextBlock() {
         case STATE_FILE_HEADER:            // Этот заголовок не использует метот сжатия
         case STATE_SERVICE_HEADER:
 			
-//            header->flags_common.number = getVInteger();
             extractVInteger(header->flags_common);
+
+
             getExtraAreaSize();
             getSizeData();
-            //header->flags_specific = getVInteger();
             extractVInteger(header->flags_specific);
             getUnpackSize();
-            //header->attributes = getVInteger();
             extractVInteger(header->attributes);
             getFileModifTime();
             //extractCRCData();
             extractInt32(header->unpacked_crc);
 
-            //header->compres_info = getVInteger();
             extractVInteger(header->compres_info);
-            //header->host_os_creator = getVInteger();
             extractVInteger(header->host_os_creator);
-//            header->name.length = getVInteger();
-           // header->length_name = getVInteger();
             extractVInteger(header->length_name);
             getName();		// перенести на извлечение данных выше TODO
             // ------------ area print specific header data --------------------

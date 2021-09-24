@@ -19,7 +19,6 @@ struct TypeVInt
     std::streampos begin;
     std::streampos end;
     uint64_t number;
-
 };
 struct TypeInt32
 {
@@ -28,19 +27,27 @@ struct TypeInt32
     uint32_t number;
 };
 
-struct ExtraArea {
+/*struct ExtraArea {
     std::vector<char>::const_iterator it;
     vint_t size;
-};
+};*/
 
 class Header {
 public:
     Header();
     void display();
-    struct ExtraData {
-        vint_t offset;
-        vint_t size_data;
-    };
+    struct GeneralExtraArea {
+        TypeVInt size;
+        TypeVInt type;
+        TypeData data;
+        struct LocatorRecord { //только у main header
+            TypeVInt flags;
+            TypeVInt quick_open_offset;
+            TypeVInt recovery_offset;
+        }locator;
+        //struct
+
+    }extra;
 
     TypeVInt size_data;
     TypeVInt size_header;    //Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
