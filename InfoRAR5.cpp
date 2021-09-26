@@ -272,7 +272,7 @@ void InfoRAR5::parseExtraArea()
     }
 }
 
-void InfoRAR5::extractCRCUnpackData()
+void InfoRAR5::getCRCUnpackData()
 {
     if(header->flags_specific.number & 0x04) {
         extractInt32(header->unpacked_crc);
@@ -415,7 +415,7 @@ bool InfoRAR5::readNextBlock() {
             getUnpackSize();
             extractVInteger(header->attributes);
             getFileModifTime();
-            extractCRCUnpackData();
+            getCRCUnpackData();
             extractVInteger(header->compres_info);
             extractVInteger(header->host_os_creator);
             extractVInteger(header->length_name);

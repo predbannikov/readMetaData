@@ -93,20 +93,29 @@ public:
 
 
 class InfoRAR5 : public BaseRAR{
+    // выставляет состоянение переменной STATE_HEADER state
+/* Type of archive header. Possible values are:
+  1   Main archive header.
+  2   File header.
+  3   Service header.
+  4   Archive encryption header.
+  5   End of archive header.*/
+    bool setStateHeader() override; //override чтоб была гарантия, что произойдет ошибка, если не виртуальная ф-ия
+
     void parseExtraArea();
-    void extractCRCUnpackData();
+    void parseDataArea();
     void getFileModifTime();
     void getExtraAreaSize();
     void getSizeData();
     void getUnpackSize();
+    void getCRCUnpackData();
     void printHostCreator();
     void printFlagComm();
     void printFlagSpec();
     void printCRCData();
     void printCompresMethod();
-    void parseDataArea();
     void printName();
-	
+    void printSmthInfo();
     void extractVInteger(TypeVInt &vint_var);
     void extractData(TypeData &data_var, size_t length);
     void extractInt32(TypeInt32 &crc_var);
@@ -122,17 +131,8 @@ public:
     InfoRAR5(std::fstream &file);
     ~InfoRAR5();
 
-    // выставляет состоянение переменной STATE_HEADER state
-/* Type of archive header. Possible values are:
-  1   Main archive header.
-  2   File header.
-  3   Service header.
-  4   Archive encryption header.
-  5   End of archive header.*/
-    bool setStateHeader() override; //override чтоб была гарантия, что произойдет ошибка, если не виртуальная ф-ия
 // читать следующий блок одного из 5 Types of archive header
     bool readNextBlock() override;
-    void printSmthInfo();
 };
 
 
