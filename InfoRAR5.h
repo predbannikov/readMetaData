@@ -33,6 +33,15 @@ struct TypeInt32
     vint_t size;
 };*/
 
+struct QuickOpenHeader{
+    TypeInt32 crc32;
+    TypeVInt size;
+    TypeVInt flags;
+    TypeVInt offset;
+    TypeVInt data_size;
+    TypeData data;
+};
+
 class Header {
 public:
     Header();
@@ -47,10 +56,12 @@ public:
             TypeVInt recovery_offset;
         } locator;
     } extra;
+
     struct ServiceDataArea {
         TypeVInt size;
         TypeVInt type;
         TypeData data;
+        std::list<QuickOpenHeader *> sub_headers;
     } service_data_area;
 
     TypeVInt size_data;
@@ -85,7 +96,7 @@ public:
 
 class InfoRAR5 : public BaseRAR{
     void parseExtraArea();
-    void extractCRCData();
+    void extractCRCUnpackData();
     void getFileModifTime();
     void getExtraAreaSize();
     void getSizeData();
@@ -96,7 +107,7 @@ class InfoRAR5 : public BaseRAR{
     void printFlagSpec();
     void printCRCData();
     void printCompresMethod();
-    void printDataArea();
+    void parseDataArea();
     void printName();
 	
     void extractVInteger(TypeVInt &vint_var);
@@ -107,7 +118,7 @@ class InfoRAR5 : public BaseRAR{
 
 	
     std::map<uint32_t, Header*> map;
-    std::list<Header*> list;
+    std::list<Header*> headers;
     Header *header = nullptr;
     std::streampos qopen_save;
 

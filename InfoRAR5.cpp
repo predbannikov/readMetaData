@@ -40,10 +40,8 @@ void InfoRAR5::printCompresMethod()
             << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
 }
 
-void InfoRAR5::printDataArea()
+void InfoRAR5::parseDataArea()
 {
-//    if(header->state == STATE_SERVICE_HEADER)
-//        std::cout << "stop" << std::endl;
     auto lambda = [](const char &byte) {
         return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
     };
@@ -54,7 +52,6 @@ void InfoRAR5::printDataArea()
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
                 << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data.number) << std::endl;
             std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
-            //auto data_size_it_loc = pos + header->size_data;
             extractData(header->package_data, header->size_data.number);
             if(MAX_SHOW_NUMBER_DATA_HEADER < header->size_data.number) {
                 std::copy_if(header->package_data.buff.begin(), header->package_data.buff.begin()+MAX_SHOW_NUMBER_DATA_HEADER, std::ostream_iterator<char>(std::cout), lambda);
@@ -65,13 +62,30 @@ void InfoRAR5::printDataArea()
             }
             break;
         case STATE_SERVICE_HEADER:
-            extractVInteger(header->service_data_area.size);
-            extractVInteger(header->service_data_area.type);
-            // parse type service
+            std::streampos begin_pos = file->tellg();
+            while(header->size_data.number != file->tellg()-begin_pos) {
+                QuickOpenHeader *a = new QuickOpenHeader;
+                header->service_data_area.sub_headers.push_back(a);
+                extractInt32(a->crc32);
+                std::cout << a->crc32.number << " crc32" << std::endl;
+                extractVInteger(a->size);
+                std::cout << a->size.number << " struct size" << std::endl;
+                extractVInteger(a->flags);
+                std::cout << a->flags.number << " flags" << std::endl;
+                extractVInteger(a->offset);
+                std::cout << a->offset.number << " offset" << std::endl;
+                extractVInteger(a->data_size);
+                std::cout << a->data_size.number << " size archive data" << std::endl;
+                std::streampos next = file->tellg();
+                next += a->data_size.number;
+                file->seekg(next);
+                if(file->eof()) {
+                    std::cout << std::endl << "eof" << std::endl;
+                    throw std::runtime_error("unexpected eof");
+                }
+            }
             break;
         }
-
-        //pos = data_size_it_loc;
     }
 }
 
@@ -291,7 +305,7 @@ void InfoRAR5::getName()
     //    std::advance(pos, header->name.length);
 }
 
-void InfoRAR5::extractCRCData()
+void InfoRAR5::extractCRCUnpackData()
 {
     if(header->flags_specific.number & 0x04) {
         extractInt32(header->unpacked_crc);
@@ -396,7 +410,7 @@ bool InfoRAR5::readNextBlock() {
     try {
 
         header = new Header;
-        list.push_back(header);
+        headers.push_back(header);//вставить в конец
         uint32_t CRC=extract32Int_() ;
 
 
@@ -462,7 +476,7 @@ bool InfoRAR5::readNextBlock() {
             getUnpackSize();
             extractVInteger(header->attributes);
             getFileModifTime();
-            extractCRCData();
+            extractCRCUnpackData();
             extractVInteger(header->compres_info);
             extractVInteger(header->host_os_creator);
             extractVInteger(header->length_name);
@@ -480,48 +494,8 @@ bool InfoRAR5::readNextBlock() {
 
 //            header->display();
             printName();
-
-            if(header->state == STATE_SERVICE_HEADER) {
-                std::cout << "diff: " << qopen_save << " " << file->tellg() << " size_data = " << header->size_data.number << std::endl;
-                std::streampos pos_tmp = file->tellg();
-                for(size_t j = 0; j < 9; j++) {
-                    std::cout << extract32Int_() << " crc32" << std::endl;
-                    std::streampos begin_data = file->tellg();
-                    std::cout << getVInteger() << " struct size" << std::endl;
-                    std::cout << getVInteger() << " flags" << std::endl;
-                    std::cout << getVInteger() << " offset" << std::endl;
-                    int size_arch_data = getVInteger();
-                    std::cout << size_arch_data << " size archive data" << std::endl;
-                    for(size_t i = 0; i < size_arch_data; i++) {
-                        char ch;
-                        file->read(&ch, 1);
-                        if(ch > 31)
-                            std::cout << ch;
-                    }
-                    if(file->eof()) {
-                        std::cout << std::endl << "eof" << std::endl;
-                    }
-                    std::streampos save_current_pos = file->tellg();
-                    int data_size = save_current_pos - begin_data;
-                    std::cout << data_size << std::endl;
-                    std::vector<char> d(data_size);
-                    file->seekg(begin_data);
-                    file->read(d.data(), data_size);
-                    std::vector<unsigned char> d2(data_size);
-                    std::copy(d.begin(), d.end(), d2.begin());
-                    std::cout << CRC32_function(d2.data(), data_size) << std::endl;
-
-                    std::cout << std::endl << "--------------- " << j << " diff=" << file->tellg()-pos_tmp <<  std::endl;
-                    if(header->size_data.number == file->tellg()-pos_tmp) {
-                        std::cout << "end service data" << std::endl;
-                        break;
-                    }
-                }
-                break;
-            }
-
             parseExtraArea();
-            printDataArea();
+            parseDataArea();
             std::cout << std::endl;
             break;
 
