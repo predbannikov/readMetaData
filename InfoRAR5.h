@@ -1,8 +1,6 @@
 #ifndef INFORAR5_H
 #define INFORAR5_H
 #include "baserar.h"
-#include "extractor.h"
-#include <map>
 #include <list>
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
@@ -28,11 +26,6 @@ struct TypeInt32
     uint32_t number;
 };
 
-/*struct ExtraArea {
-    std::vector<char>::const_iterator it;
-    vint_t size;
-};*/
-
 struct QuickOpenHeader{
     TypeInt32 crc32;
     TypeVInt size;
@@ -55,6 +48,10 @@ public:
             TypeVInt quick_open_offset;
             TypeVInt recovery_offset;
         } locator;
+        struct FileTime {
+            TypeVInt flag;
+
+        } time;
     } extra;
 
     struct ServiceDataArea {
@@ -79,6 +76,7 @@ public:
     TypeVInt length_name;
     TypeData name;
     TypeData package_data;
+    TypeVInt end_of_archive_flags;
 
     STATE_HEADER state = STATE_MARKER_HEADER;
     /* If flag 0x0008 is set, unpacked size field is still present,
@@ -101,7 +99,6 @@ class InfoRAR5 : public BaseRAR{
     void getExtraAreaSize();
     void getSizeData();
     void getUnpackSize();
-    void getName();
     void printHostCreator();
     void printFlagComm();
     void printFlagSpec();
@@ -115,12 +112,8 @@ class InfoRAR5 : public BaseRAR{
     void extractInt32(TypeInt32 &crc_var);
     uint32_t extract32Int_();
     uint64_t extract64Int_();
-
-	
-    std::map<uint32_t, Header*> map;
     std::list<Header*> headers;
     Header *header = nullptr;
-    std::streampos qopen_save;
 
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
 public:
@@ -142,12 +135,9 @@ public:
 // читать следующий блок одного из 5 Types of archive header
     bool readNextBlock() override;
 
-    /* vint из спецификации
-Variable length integer.
-Can include one or more bytes, where lower 7 bits of every byte contain integer data and highest bit in every byte is the continuation flag. If highest bit is 0, this is the last byte in sequence. So first byte contains 7 least significant bits of integer and continuation flag.
-Second byte, if present, contains next 7 bits and so on.*/
-    vint_t getVInteger(); 	// эта функция выдает размер
 
+
+    void printSmthInfo();
 };
 
 
