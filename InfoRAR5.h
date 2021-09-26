@@ -3,6 +3,7 @@
 #include "baserar.h"
 #include "extractor.h"
 #include <map>
+#include <list>
 
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
@@ -44,10 +45,13 @@ public:
             TypeVInt flags;
             TypeVInt quick_open_offset;
             TypeVInt recovery_offset;
-        }locator;
-        //struct
-
-    }extra;
+        } locator;
+    } extra;
+    struct ServiceDataArea {
+        TypeVInt size;
+        TypeVInt type;
+        TypeData data;
+    } service_data_area;
 
     TypeVInt size_data;
     TypeVInt size_header;    //Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
@@ -103,7 +107,11 @@ class InfoRAR5 : public BaseRAR{
 
 	
     std::map<uint32_t, Header*> map;
+    std::list<Header*> list;
     Header *header = nullptr;
+    std::streampos qopen_save;
+
+    unsigned int CRC32_function(unsigned char *buf, unsigned long len);
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
