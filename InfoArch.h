@@ -2,16 +2,13 @@
 #define INFOARCH_H
 
 #include <fstream>
-
-
 #include "InfoRAR4x.h"
 #include "InfoRAR5.h"
 
 
 class InfoArch {
     std::string FileName;
-    std::   fstream file;
-    std::vector<char> data;
+    std::fstream file;
     std::string rar_version;
 
     int size = 0;
@@ -38,16 +35,13 @@ public:
         size = end-begin; 						// размер всего архива
         file.seekg(std::ios::beg); 				// перешли в начало
 
-//        data.resize(size);
-//        file.read(&data[0], size);
-        // в data поместили архив
         std::cout << "\nread " << size << " bytes" << std::endl;
-       // file.close();
         if(!checkArchive()) // если не формата RAR или RAR, но несовременной версии 5.0
             return false;
         std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
         work();
         delete rar;
+        file.close();
         return true;
     }
 

@@ -5,7 +5,20 @@
 const char InfoRAR5::signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR] {0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x1, 0x0};
 
 InfoRAR5::InfoRAR5(std::fstream &file) : BaseRAR(file){ // инициализируем BaseRAR
-   
+
+}
+
+InfoRAR5::~InfoRAR5()
+{
+    auto it_tmp = headers.end();
+    --it_tmp;
+    headers.erase(it_tmp);
+    auto l = headers.back()->service_data_area.sub_headers;
+    for(auto it = l.begin(); it != l.end(); it++)
+        delete *it;
+
+    for(auto it = headers.begin(); it != headers.end(); it++)
+        delete *it;
 }
 /*Flags specific for file header type:
             0x0001   Directory file system object (file header only).

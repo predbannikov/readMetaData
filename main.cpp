@@ -19,8 +19,5 @@ int main(int argc, char* argv[])
         std::cerr << "unknown error" << std::endl;
         return -1;
     }
-
-
-    std::cout <<"end" << std::endl;
     return 0;
 }

@@ -2,7 +2,7 @@
 #define INFORAR5_H
 #include "baserar.h"
 #include <list>
-
+#include <vector>
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
@@ -130,13 +130,8 @@ public:
   4   Archive encryption header.
   5   End of archive header.*/
     bool setStateHeader() override; //override чтоб была гарантия, что произойдет ошибка, если не виртуальная ф-ия
-
-
 // читать следующий блок одного из 5 Types of archive header
     bool readNextBlock() override;
-
-
-
     void printSmthInfo();
 };
 
