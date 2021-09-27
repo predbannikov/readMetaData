@@ -1,8 +1,10 @@
 #include "InfoRAR5.h"
+#include <ctime>
 #define EMPTY_SPACE_LEFT                5           ////просто для выравнивания при печати
 #define EMPTY_SPACE_AFTER_LEFT          45
 #define EMPTY_SPACE_RIGHT_NUMBER        7
 const char InfoRAR5::signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR] {0x52, 0x61, 0x72, 0x21, 0x1A, 0x07, 0x1, 0x0};
+const char* InfoRAR5::digits = "0123456789ABCDEF";
 
 InfoRAR5::InfoRAR5(std::fstream &file) : BaseRAR(file){ // инициализируем BaseRAR
 
@@ -20,22 +22,7 @@ InfoRAR5::~InfoRAR5()
     for(auto it = headers.begin(); it != headers.end(); it++)
         delete *it;
 }
-/*Flags specific for file header type:
-            0x0001   Directory file system object (file header only).
-            0x0002   Time field in Unix format is present.
-            0x0004   CRC32 field is present.
-            0x0008   Unpacked size is unknown.*/
-void InfoRAR5::printFlagSpec()
-{
-    if(header->flags_specific.number & 0x1)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
-    if(header->flags_specific.number & 0x2)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
-    if(header->flags_specific.number & 0x4)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
-    if(header->flags_specific.number & 0x8)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
-}
+
 
 void InfoRAR5::printCRCData()
 {
@@ -146,6 +133,7 @@ void InfoRAR5::extractData(TypeData &data_var, size_t length)
     data_var.buff.resize(length);
     file->read(data_var.buff.data(), length);
     data_var.end = file->tellg();
+    data_var.length = length;
 }
 
 void InfoRAR5::extractInt32(TypeInt32 &var)
@@ -191,6 +179,7 @@ uint64_t InfoRAR5::extract64Int_()
     return *reinterpret_cast<const uint64_t*>(buff);
 }
 
+
 unsigned int InfoRAR5::CRC32_function(unsigned char *buf, unsigned long len) // для будущего удаления
 {
     unsigned long crc_table[256];
@@ -206,6 +195,13 @@ unsigned int InfoRAR5::CRC32_function(unsigned char *buf, unsigned long len) // 
     while (len--)
         crc = crc_table[(crc ^ *buf++) & 0xFF] ^ (crc >> 8);
     return crc ^ 0xFFFFFFFFUL;
+}
+
+#define WINDOWS_TICK 10000000
+#define SEC_TO_UNIX_EPOCH 11644473600LL
+unsigned WindowsTickToUnixSeconds(long long windowsTicks)
+{
+     return (unsigned)(windowsTicks / WINDOWS_TICK - SEC_TO_UNIX_EPOCH);
 }
 
 void InfoRAR5::parseExtraArea()
@@ -248,13 +244,16 @@ void InfoRAR5::parseExtraArea()
                 uint64_t atime;		// last access
                 if(header->extra.time.flag.number & 0x0002) {
                     mtime = header->extra.time.flag.number & 0x0010 ? extract32Int_() : extract64Int_();
-                    std::cout << "mtime = " << mtime << std::endl;
+                    time_t t = static_cast<time_t>(WindowsTickToUnixSeconds(mtime));
+                    header->extra.time.mtime = std::asctime(std::localtime(&t));
                 } else if(header->extra.time.flag.number & 0x0004) {
                     ctime = header->extra.time.flag.number & 0x0010 ? extract32Int_() : extract64Int_();
-                    std::cout << "ctime = " << ctime << std::endl;
+                    time_t t = static_cast<time_t>(WindowsTickToUnixSeconds(mtime));
+                    header->extra.time.ctime = std::asctime(std::localtime(&t));
                 } else if(header->extra.time.flag.number & 0x0008) {
                     atime = header->extra.time.flag.number & 0x0010 ? extract32Int_() : extract64Int_();
-                    std::cout << "atime = " << atime << std::endl;
+                    time_t t = static_cast<time_t>(WindowsTickToUnixSeconds(mtime));
+                    header->extra.time.atime = std::asctime(std::localtime(&t));
                 }
                 break;
             }
@@ -309,14 +308,6 @@ void InfoRAR5::getUnpackSize()
     else
         header->ignorUnpackSize = false;;
     extractVInteger(header->unpack_size);
-}
-
-void InfoRAR5::printHostCreator()
-{
-    if(header->host_os_creator.number & 0x0)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "UNIX used to create this archive." << std::endl;
-    else
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "WINDOWS used to create this archive." << std::endl;
 }
 
 void InfoRAR5::printFlagComm()
@@ -375,15 +366,13 @@ void InfoRAR5::printSmthInfo()
 }
 
 bool InfoRAR5::readNextBlock() {
+    static int index = -1;
     try {
+        index++;
 
         header = new Header;
         headers.push_back(header);//вставить в конец
-        uint32_t CRC=extract32Int_() ;
-
-
-        std::cout << "CRC=" << CRC << std::endl;
-
+        extractInt32(header->crc);
         extractVInteger(header->size_header);
 
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
@@ -421,21 +410,22 @@ bool InfoRAR5::readNextBlock() {
             extractVInteger(header->length_name);
             extractData(header->name, header->length_name.number);
             // ------------ area print specific header data --------------------
-            printHostCreator();
-            printFlagSpec();
-            printCRCData();
-            printCompresMethod();
-            printFlagComm();
-            printSmthInfo();
+//            printFlagSpec();
+//            printCRCData();
+//            printCompresMethod();
+//            printFlagComm();
+//            printSmthInfo();
             printName();
             parseExtraArea();
             parseDataArea();
+            printInfo(index);
             std::cout << std::endl;
             break;
 
         case STATE_END_OF_ARCHIVE:
             extractVInteger(header->flags_common);
             extractVInteger(header->end_of_archive_flags);
+            printInfo(index);
             if(header->end_of_archive_flags.number == 0x01)
                 std::cout << "it is not last volume in the set"<< std::endl;
             else
@@ -451,4 +441,170 @@ bool InfoRAR5::readNextBlock() {
 
 Header::Header() {
 
+}
+
+///*Flags specific for file header type:
+//            0x0001   Directory file system object (file header only).
+//            0x0002   Time field in Unix format is present.
+//            0x0004   CRC32 field is present.
+//            0x0008   Unpacked size is unknown.*/
+//void InfoRAR5::printFlagSpec()
+//{
+//    if(header->flags_specific.number & 0x1)
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
+//    if(header->flags_specific.number & 0x2)
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
+//    if(header->flags_specific.number & 0x4)
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
+//    if(header->flags_specific.number & 0x8)
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
+//}
+
+#define FIRST_COLUMN_WIDTH	16
+#define SECOND_COLUMN_WIDTH 24
+#define THIRD_COLUMN_WIDTH	32
+
+std::string InfoRAR5::hexStrFromDec(uint32_t d)
+{
+    std::string s;
+    uint8_t *bt = reinterpret_cast<uint8_t*>(&d);
+    for(int i = 3; i >= 0; i--) {
+        s.push_back(digits[*(bt+i) >> 4]);
+        s.push_back(digits[*(bt+i) & 0x0F]);
+    }
+    return s;
+}
+
+std::string InfoRAR5::fillStrCol(std::string s, size_t len, char ch)
+{
+    if(s.length() <= len) {
+        int d = len - s.length();
+        int m = d % 2;
+        int part = d / 2;
+        s.insert(s.begin(), part, ch);
+        s.resize(part + s.length() + m, ch);
+    } else {
+        s.resize(len);
+    }
+    return s;
+}
+
+void InfoRAR5::printLine(std::string first, uint64_t second, char format)
+{
+    if(second == 0)
+        return;
+    if(format == 'h')
+        std::cout << "|" << fillStrCol(first, FIRST_COLUMN_WIDTH) << "|" << fillStrCol(hexStrFromDec(second), SECOND_COLUMN_WIDTH) << "|" << std::endl;
+    else
+        std::cout << "|" << fillStrCol(first, FIRST_COLUMN_WIDTH) << "|" << fillStrCol(std::to_string(second), SECOND_COLUMN_WIDTH) << "|" << std::endl;
+    std::cout << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
+}
+
+void InfoRAR5::printLine(std::string first, std::string second, char ch)
+{
+    std::cout <<  "|" << fillStrCol(first, FIRST_COLUMN_WIDTH, ch) << "|" << fillStrCol(second, SECOND_COLUMN_WIDTH, ch) << "|" << std::endl;
+    std::cout << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
+}
+
+void InfoRAR5::printLine(std::string first, char ch)
+{
+    std::cout <<  "|" << fillStrCol(first, FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, ch) << "|" << std::endl;
+    std::cout << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
+}
+
+void InfoRAR5::printLine(TypeData &data)
+{
+    if(data.begin == data.end)
+        return;
+    auto lambda = [](const char &byte) {
+        return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
+    };
+    std::streampos save_pos = file->tellg();
+    size_t size_buff;
+    if(MAX_SHOW_NUMBER_DATA_HEADER < data.length)
+        size_buff = MAX_SHOW_NUMBER_DATA_HEADER;
+    else
+        size_buff = data.length;
+    file->seekg(data.begin);
+    char ch;
+    std::string str;
+    for(size_t i = 0; i < size_buff; i++) {
+        file->read(&ch, 1);
+        str.push_back(digits[(0xFF&ch) >> 4]);
+        str.push_back(digits[ch & 0x0F]);
+        str.push_back(' ');
+    }
+    size_t width = FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1;
+    std::cout << "|" << fillStrCol("DATA", width) << std::endl;
+    while(width < str.length()) {
+        std::cout << "|" << str.substr(0, width) << "|" << std::endl;
+        str.erase(0, width);
+    }
+    std::cout << "|" << fillStrCol(str, width);
+    std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
+    file->seekg(save_pos);
+}
+
+void InfoRAR5::printHeader(uint64_t type)
+{
+    std::cout << "+" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "+" << std::endl;
+    std::cout << "|";
+    switch (type) {
+    std::cout << "MAIN HEADER" << std::endl;
+    case 2:
+        std::cout << fillStrCol("FILE HEADER", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
+        break;
+    case 3:
+        std::cout << fillStrCol("SERVICE HEADER", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
+        break;
+    case 4:
+        std::cout << fillStrCol("this is encryption header", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
+        break;
+    case 5:
+        std::cout << fillStrCol("END_OF_ARCHIVE HEADER", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
+        break;
+    }
+    std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
+}
+
+void InfoRAR5::printInfo(size_t index)
+{
+    int i = 0;
+    auto it = headers.begin();
+    for( ; it != headers.end(); it++, i++)
+        if(i == index)
+            break;
+    Header *h = *it;
+
+    printHeader(header->type.number);
+
+    printLine("CRC", h->crc.number, 'h');
+
+    printLine("SIZE HEADER", h->size_header.number);
+
+    if(h->flags_specific.number & 0x1)
+        printLine("Directory file system object");
+
+    if(h->flags_specific.number & 0x04)
+        printLine("CRC UNPACK DATA", h->unpacked_crc.number, 'h');
+
+    if(h->flags_specific.number & 0x08)
+        printLine("UNPACK DATA SIZE", "unknown");
+    else
+        printLine("UNPACK DATA SIZE", h->unpack_size.number);
+
+    printLine("CREATOR", header->host_os_creator.number & 0x01 ? "UNIX" : "WINDOWS");
+
+    if(!h->extra.time.mtime.empty())
+        printLine("MODIFIC TIME", h->extra.time.mtime);
+
+    if(!h->extra.time.ctime.empty())
+        printLine("CREATE TIME", h->extra.time.ctime);
+
+    if(!h->extra.time.atime.empty())
+        printLine("LAST ACCESS TIME", h->extra.time.atime);
+
+    printLine(h->package_data);
+
+    std::cout << std::endl;
 }
