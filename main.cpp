@@ -4,6 +4,10 @@
 
 int main(int argc, char* argv[])
 {
+#if defined (_WIN32)
+    SetConsoleOutputCP( CP_UTF8 );
+#elif defined (__linux__)
+#endif
     InfoArch archive;
     if( argc < 2 )
     {

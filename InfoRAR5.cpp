@@ -537,19 +537,59 @@ void InfoRAR5::printLine(TypeData &data)
 
 void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
 {
-//    std::string str(data.buff.begin(), data.buff.end());    int y = 0xFFFF & keyboard.getCurPosCursor();
 
 //    std::cout << fillStrCol(str, THIRD_COLUMN_WIDTH, ' ', 'l');
     int width_term, heigth_term;
     keyboard.get_terminal_size(width_term, heigth_term);
-    for(size_t i = 0; i < str.length(); i+=2) {
-        std::cout << str[i] << str[i+1];
+    int x;
+    int y;
+    if(str.empty())
+        str.push_back(' ');
+    char unicode[4];
+    unicode[0] = ' ';
+    int counter = 0;
+    for(size_t i = 0; i < str.length(); i++) {
+        if(static_cast<uint8_t>(str[i]) < 0x7F) {
+            for(int j = 0; j < counter; j++)
+                std::cout << unicode[j];
+            counter = 0;
+            std::cout << str[i];
+        }
+        else {
+            if((str[i] & 0xF0) == 0xF0) {
+                for(int j = 0; j < counter; j++)
+                    std::cout << unicode[j];
+                counter = 0;
+                unicode[counter] = str[i];
+            } else if((str[i] & 0xE0) == 0xE0) {
+                for(int j = 0; j < counter; j++)
+                    std::cout << unicode[j];
+                counter = 0;
+                unicode[counter] = str[i];
+            } else if((str[i] & 0xC0) == 0xC0) {
+                for(int j = 0; j < counter; j++)
+                    std::cout << unicode[j];
+                counter = 0;
+                unicode[counter] = str[i];
+            } else if(str[i] &  0x80 && !(str[i] & 0x40)) {
+                unicode[counter] = str[i];
+            }
+            else
+                std::cout << "stop" << std::endl;
+            if(counter < 4) {
+                counter++;
+            } else
+                std::cout << unicode;
+        }
         int pos = keyboard.getCurPosCursor();
-        int x = 0xFFFF & pos;
-        int y = pos >> 16;
-        if(x == width_term-1)
-            break;
+        x = 0xFFFF & pos;
+        y = pos >> 16;
+        if(x >= width_term)
+            return;
     }
+    x--;
+    std::string empty_space(width_term - x - 1, ' ');
+    std::cout << empty_space;
 //    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
 //    if(header->state == STATE_SERVICE_HEADER) {
 //        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
@@ -571,7 +611,9 @@ void InfoRAR5::printHeader(uint64_t type)
     std::cout << "+" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "+" << std::endl;
     std::cout << "|";
     switch (type) {
-    std::cout << "MAIN HEADER" << std::endl;
+    case 1:
+        std::cout << fillStrCol("MAIN HEADER", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
+        break;
     case 2:
         std::cout << fillStrCol("FILE HEADER", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1);
         break;
@@ -592,6 +634,8 @@ void InfoRAR5::printHeader(uint64_t type)
 
 void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 {
+    int width_term, heigth_term;
+    keyboard.get_terminal_size(width_term, heigth_term);
     int i = 0;
     auto it_ = headers.begin();
     auto it = it_;
@@ -599,12 +643,15 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
     for( ; it_ != headers.end(); it_++, i++) {
         if(i == index)
             it = it_;
-        names.push_back(std::string((*it_)->name.buff.begin(), (*it_)->name.buff.end()));
+//        if((*it_)->name.buff.empty())
+//            names.push_back(std::string(width_term - FIRST_COLUMN_WIDTH - SECOND_COLUMN_WIDTH - 3, ' '));
+//        else
+            names.push_back(std::string((*it_)->name.buff.begin(), (*it_)->name.buff.end()));
     }
     Header *h = *it;
     home();
     clrscr();
-    printHeader(header->type.number);
+    printHeader(h->type.number);
 
     printLine("CRC", h->crc.number, 'h');
 

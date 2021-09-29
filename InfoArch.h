@@ -88,7 +88,7 @@ public:
 //                    rar->printInfo(index);
                 }
             rar->printInfo(index, keyboard);
-            key = keyboard.getch();
+            key = keyboard._getch();
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
 //            std::cout << key << " " << std::flush;
         }

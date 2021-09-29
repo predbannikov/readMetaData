@@ -1,6 +1,14 @@
 #include "keyboard.h"
 
 Keyboard::Keyboard() {
+#if defined (_WIN32)
+	HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD dwMode = 0; 
+	GetConsoleMode(hOut, &dwMode);
+	dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(hOut, dwMode);
+
+#elif defined (__linux__)
     tcgetattr(0,&initial_settings);
     new_settings = initial_settings;
     new_settings.c_lflag &= ~ICANON;
@@ -10,10 +18,15 @@ Keyboard::Keyboard() {
     new_settings.c_cc[VTIME] = 0;
     tcsetattr(0, TCSANOW, &new_settings);
     peek_character=-1;
+#endif
 }
 
 Keyboard::~Keyboard() {
+#if defined (_WIN32)
+	
+#elif defined (__linux__)
     tcsetattr(0, TCSANOW, &initial_settings);
+#endif
 }
 
 void Keyboard::get_terminal_size(int &width, int &height) {
@@ -31,6 +44,9 @@ void Keyboard::get_terminal_size(int &width, int &height) {
 }
 
 int Keyboard::kbhit(){
+#if defined (_WIN32)
+
+#elif defined (__linux__)
     unsigned char ch;
     int nread;
     if (peek_character != -1) return 1;
@@ -44,6 +60,7 @@ int Keyboard::kbhit(){
         peek_character = ch;
         return 1;
     }
+#endif
     return 0;
 }
 
@@ -55,7 +72,7 @@ unsigned long Keyboard::getCurPosCursor()
     unsigned long save_upper = 0;
     char ch = ' ';
     while(ch != 'R') {
-        ch = getch();
+        ch = _getch();
         switch (ch) {
         case '[':
             break;
@@ -78,18 +95,22 @@ unsigned long Keyboard::getCurPosCursor()
         case ';':
             pos <<= 16;
             break;
-
         }
     }
     return pos;
 }
 
-int Keyboard::getch(){
+int Keyboard::_getch(){
     char ch;
+#if defined (_WIN32)
+    ch = getch();
+    return ch;
+#elif defined (__linux__)
     if (peek_character != -1){
         ch = peek_character;
         peek_character = -1;
     }
     else read(0,&ch,1);
+#endif
     return ch;
 }
