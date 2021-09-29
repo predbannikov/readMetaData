@@ -15,6 +15,7 @@ int main(int argc, char* argv[])
         {
             std::cerr << "exit program" << std::endl;
         }
+        archive.work();
     }  catch (...) {
         std::cerr << "unknown error" << std::endl;
         return -1;

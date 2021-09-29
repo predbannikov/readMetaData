@@ -4,7 +4,7 @@
 #include <fstream>
 #include "InfoRAR4x.h"
 #include "InfoRAR5.h"
-
+#include "keyboard.h"
 
 class InfoArch {
     std::string FileName;
@@ -18,9 +18,10 @@ public:
         rar_version = "nan";
     }
     ~InfoArch() {
+        file.close();
+        delete rar;
     }
-
-
+    Keyboard keyboard;
     BaseRAR *rar;
     bool open(std::string FileName_1) {
         FileName = FileName_1;
@@ -39,12 +40,10 @@ public:
         if(!checkArchive()) // если не формата RAR или RAR, но несовременной версии 5.0
             return false;
         std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
-        work();
-        delete rar;
-        file.close();
+        while(rar->readNextBlock()) {
+        }
         return true;
     }
-
 
     bool checkArchive() {
         char buff[8];
@@ -67,15 +66,34 @@ public:
     }
 
     void work() {
-
-        while(rar->readNextBlock()) {
-
-        }
-
+        parseKey();
     }
 
-
-
+    void parseKey() {
+        int key = 48;
+        int width, height;
+        size_t index = 0;
+        const size_t count_headers = rar->getCountHeaders();
+        while(key != 27 && key != 'q') {
+//            get_terminal_size(width, height);
+            if(key == 'j') {
+                if(index < count_headers) {
+                    index++;
+//                    rar->printInfo(index);
+                }
+            }
+            if(key == 'k')
+                if(index > 0) {
+                    index--;
+//                    rar->printInfo(index);
+                }
+            rar->printInfo(index, keyboard);
+            key = keyboard.getch();
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+//            std::cout << key << " " << std::flush;
+        }
+    };
 };
+
 
 #endif

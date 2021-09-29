@@ -5,6 +5,12 @@
 #include <iomanip>
 #include <algorithm>
 #include <fstream>
+#include <thread>
+#include "keyboard.h"
+
+
+
+class Keyboard;
 
 class BaseRAR;
 
@@ -21,6 +27,8 @@ public:
 
     virtual bool setStateHeader(){ return bool();};
     virtual bool readNextBlock(){ return bool();};
+    virtual void printInfo(size_t index, Keyboard &keyboard) {};
+    virtual size_t getCountHeaders() { return 0; }
     virtual ~BaseRAR() {};
 };
 

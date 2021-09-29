@@ -114,9 +114,8 @@ class InfoRAR5 : public BaseRAR{
     void extractInt32(TypeInt32 &crc_var);
     void printFlagComm();
     void printFlagSpec();
-    void printCRCData();
-    void printCompresMethod();
-    void printName();
+//    void printCRCData();
+//    void printCompresMethod();
     void printSmthInfo();
     uint32_t extract32Int_();
     uint64_t extract64Int_();
@@ -124,14 +123,14 @@ class InfoRAR5 : public BaseRAR{
     Header *header = nullptr;
     std::string test;
     std::string hexStrFromDec(uint32_t d);
-    std::string fillStrCol(std::string s, size_t len, char ch = ' ');
+    std::string fillStrCol(std::string s, size_t len, char ch = ' ', char allign = 'c'); // impl c,l
     void printHeader(uint64_t type);
     void printLine(std::string first, uint64_t second, char format = 'd');
     void printLine(std::string first, std::string second, char ch = ' ');
     void printLine(std::string first, char ch = ' ');
     void printLine(TypeData &data);
+    void printName(std::string &str, Keyboard &keyboard);
 
-    void printInfo(size_t index);
 
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
     static const char* digits;
@@ -140,9 +139,11 @@ public:
 
     InfoRAR5(std::fstream &file);
     ~InfoRAR5();
+    void printInfo(size_t index, Keyboard &keyboard) override;
 
 // читать следующий блок одного из 5 Types of archive header
     bool readNextBlock() override;
+    size_t getCountHeaders() override;
 };
 
 

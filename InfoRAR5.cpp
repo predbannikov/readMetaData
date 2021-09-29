@@ -24,19 +24,19 @@ InfoRAR5::~InfoRAR5()
 }
 
 
-void InfoRAR5::printCRCData()
-{
-    if(header->flags_specific.number & 0x04)
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:"
-            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->unpacked_crc.number << std::dec << std::endl;
-}
+//void InfoRAR5::printCRCData()
+//{
+//    if(header->flags_specific.number & 0x04)
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:"
+//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->unpacked_crc.number << std::dec << std::endl;
+//}
 
-void InfoRAR5::printCompresMethod()
-{
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: "
-            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
-}
+//void InfoRAR5::printCompresMethod()
+//{
+//    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
+//    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: "
+//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
+//}
 
 void InfoRAR5::parseDataArea()
 {
@@ -46,18 +46,18 @@ void InfoRAR5::parseDataArea()
     if(header->flags_common.number & 0x02) {
         switch (header->state) {
         case STATE_FILE_HEADER:
-            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Data area:" << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
-                << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data.number) << std::endl;
-            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
+//            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Data area:" << std::endl;
+//            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
+//                << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data.number) << std::endl;
+//            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
             extractData(header->package_data, header->size_data.number);
-            if(MAX_SHOW_NUMBER_DATA_HEADER < header->size_data.number) {
-                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.begin()+MAX_SHOW_NUMBER_DATA_HEADER, std::ostream_iterator<char>(std::cout), lambda);
-                std::cout << "...\"" << std::endl;
-            } else {
-                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.end(), std::ostream_iterator<char>(std::cout), lambda);
-                std::cout << "\"" << std::endl;
-            }
+//            if(MAX_SHOW_NUMBER_DATA_HEADER < header->size_data.number) {
+//                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.begin()+MAX_SHOW_NUMBER_DATA_HEADER, std::ostream_iterator<char>(std::cout), lambda);
+//                std::cout << "...\"" << std::endl;
+//            } else {
+//                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.end(), std::ostream_iterator<char>(std::cout), lambda);
+//                std::cout << "\"" << std::endl;
+//            }
             break;
         case STATE_SERVICE_HEADER:
             std::streampos begin_pos = file->tellg();
@@ -65,15 +65,15 @@ void InfoRAR5::parseDataArea()
                 QuickOpenHeader *a = new QuickOpenHeader;
                 header->service_data_area.sub_headers.push_back(a);
                 extractInt32(a->crc32);
-                std::cout << a->crc32.number << " crc32" << std::endl;
+//                std::cout << a->crc32.number << " crc32" << std::endl;
                 extractVInteger(a->size);
-                std::cout << a->size.number << " struct size" << std::endl;
+//                std::cout << a->size.number << " struct size" << std::endl;
                 extractVInteger(a->flags);
-                std::cout << a->flags.number << " flags" << std::endl;
+//                std::cout << a->flags.number << " flags" << std::endl;
                 extractVInteger(a->offset);
-                std::cout << a->offset.number << " offset" << std::endl;
+//                std::cout << a->offset.number << " offset" << std::endl;
                 extractVInteger(a->data_size);
-                std::cout << a->data_size.number << " size archive data" << std::endl;
+//                std::cout << a->data_size.number << " size archive data" << std::endl;
                 std::streampos next = file->tellg();
                 next += a->data_size.number;
                 file->seekg(next);
@@ -84,26 +84,6 @@ void InfoRAR5::parseDataArea()
             }
             break;
         }
-    }
-}
-
-void InfoRAR5::printName()
-{
-    std::string str(header->length_name.number, ' ');
-    std::copy(header->name.buff.begin(), header->name.buff.end(), str.begin());
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
-    if(header->state == STATE_SERVICE_HEADER) {
-        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
-        if(str == "QO")
-            std::cout << "Archive quick open data" << std::endl;
-        else if(str == "CMT")
-            std::cout << "Archive comment";
-        else if(str == "ACL")
-            std::cout << "NTFS file permissions";
-        else if(str == "STM")
-            std::cout << "NTFS alternate data stream";
-        else if(str == "RR")
-            std::cout << "Recovery record";
     }
 }
 
@@ -207,26 +187,26 @@ unsigned WindowsTickToUnixSeconds(long long windowsTicks)
 void InfoRAR5::parseExtraArea()
 {
     if(header->flags_common.number & 0x01) {
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
-        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
-            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area.number) << std::endl;
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
+//        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
+//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area.number) << std::endl;
 
         extractVInteger(header->extra.size);
-        std::cout << "size of record data starting from TYPE " << header->extra.size.number << std::endl;
+//        std::cout << "size of record data starting from TYPE " << header->extra.size.number << std::endl;
         extractVInteger(header->extra.type);
-        std::cout << "type_extra " << header->extra.type.number << std::endl;
+//        std::cout << "type_extra " << header->extra.type.number << std::endl;
         switch (header->state) {
         case STATE_MAIN_HEADER: {
-            if(header->extra.type.number == 0x01)
-                std::cout << "locator record: type " << std::endl;
+//            if(header->extra.type.number == 0x01)
+//                std::cout << "locator record: type " << std::endl;
             extractVInteger(header->extra.locator.flags);
             if( header->extra.locator.flags.number & 0x01) {
                 extractVInteger(header->extra.locator.quick_open_offset);
-                std::cout << "Quick open record offset is present. " << header->extra.locator.quick_open_offset.number << std::endl;
+//                std::cout << "Quick open record offset is present. " << header->extra.locator.quick_open_offset.number << std::endl;
             }
             if( header->extra.locator.flags.number & 0x02) {
                 extractVInteger(header->extra.locator.recovery_offset);
-                std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
+//                std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
             }
             break;
         }
@@ -284,8 +264,8 @@ void InfoRAR5::getFileModifTime()
     if(header->flags_specific.number & 0x02)  {
         uint32_t header_mtime = extract32Int_();
 
-        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Modification time in Unix time format:"
-            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_mtime) << std::endl;
+//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Modification time in Unix time format:"
+//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_mtime) << std::endl;
     }
 }
 
@@ -334,21 +314,21 @@ bool InfoRAR5::setStateHeader()
     switch (header->type.number) {
     case 1:
         header->state = STATE_MAIN_HEADER;
-        std::cout << "BLOCK MAIN HEAD size = " << header->size_header.number << std::endl;
+//        std::cout << "BLOCK MAIN HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 2:
         header->state = STATE_FILE_HEADER;
-        std::cout << "BLOCK FILE HEAD size = " << header->size_header.number << std::endl;
+//        std::cout << "BLOCK FILE HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 3:
         header->state = STATE_SERVICE_HEADER;
-        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header.number << std::endl;
+//        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 4:
-        std::cout << "this is encryption header" << std::endl;
+//        std::cout << "this is encryption header" << std::endl;
         return false;
     case 5:
-        std::cout << "BLOCK END_OF_ARCHIVE HEAD size = " << header->size_header.number << std::endl;
+//        std::cout << "BLOCK END_OF_ARCHIVE HEAD size = " << header->size_header.number << std::endl;
         header->state = STATE_END_OF_ARCHIVE;
         return true;
     default:							// ошибка, случилось непредвиденное
@@ -390,9 +370,9 @@ bool InfoRAR5::readNextBlock() {
             parseExtraArea();
             if(header->flags_specific.number & 0x02) {
                 extractVInteger(header->volume_number);
-                std::cout << "number volume " << header->volume_number.number << std::endl;
+//                std::cout << "number volume " << header->volume_number.number << std::endl;
             }
-            std::cout << std::endl;
+//            std::cout << std::endl;
             break;
         }
         case STATE_FILE_HEADER:
@@ -415,17 +395,17 @@ bool InfoRAR5::readNextBlock() {
 //            printCompresMethod();
 //            printFlagComm();
 //            printSmthInfo();
-            printName();
+//            printName();
             parseExtraArea();
             parseDataArea();
-            printInfo(index);
-            std::cout << std::endl;
+//            printInfo(index);
+//            std::cout << std::endl;
             break;
 
         case STATE_END_OF_ARCHIVE:
             extractVInteger(header->flags_common);
             extractVInteger(header->end_of_archive_flags);
-            printInfo(index);
+//            printInfo(index);
             if(header->end_of_archive_flags.number == 0x01)
                 std::cout << "it is not last volume in the set"<< std::endl;
             else
@@ -438,6 +418,12 @@ bool InfoRAR5::readNextBlock() {
     }
     return true;
 }
+
+size_t InfoRAR5::getCountHeaders()
+{
+    return headers.size();
+}
+
 
 Header::Header() {
 
@@ -475,14 +461,18 @@ std::string InfoRAR5::hexStrFromDec(uint32_t d)
     return s;
 }
 
-std::string InfoRAR5::fillStrCol(std::string s, size_t len, char ch)
+std::string InfoRAR5::fillStrCol(std::string s, size_t len, char ch, char allign)
 {
     if(s.length() <= len) {
-        int d = len - s.length();
-        int m = d % 2;
-        int part = d / 2;
-        s.insert(s.begin(), part, ch);
-        s.resize(part + s.length() + m, ch);
+        if(allign == 'c') {
+            int d = len - s.length();
+            int m = d % 2;
+            int part = d / 2;
+            s.insert(s.begin(), part, ch);
+            s.resize(part + s.length() + m, ch);
+        } else if(allign == 'l'){
+            s.resize(len, ch);
+        }
     } else {
         s.resize(len);
     }
@@ -545,6 +535,37 @@ void InfoRAR5::printLine(TypeData &data)
     file->seekg(save_pos);
 }
 
+void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
+{
+//    std::string str(data.buff.begin(), data.buff.end());    int y = 0xFFFF & keyboard.getCurPosCursor();
+
+//    std::cout << fillStrCol(str, THIRD_COLUMN_WIDTH, ' ', 'l');
+    int width_term, heigth_term;
+    keyboard.get_terminal_size(width_term, heigth_term);
+    for(size_t i = 0; i < str.length(); i+=2) {
+        std::cout << str[i] << str[i+1];
+        int pos = keyboard.getCurPosCursor();
+        int x = 0xFFFF & pos;
+        int y = pos >> 16;
+        if(x == width_term-1)
+            break;
+    }
+//    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
+//    if(header->state == STATE_SERVICE_HEADER) {
+//        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
+//        if(str == "QO")
+//            std::cout << "Archive quick open data" << std::endl;
+//        else if(str == "CMT")
+//            std::cout << "Archive comment";
+//        else if(str == "ACL")
+//            std::cout << "NTFS file permissions";
+//        else if(str == "STM")
+//            std::cout << "NTFS alternate data stream";
+//        else if(str == "RR")
+//            std::cout << "Recovery record";
+//    }
+}
+
 void InfoRAR5::printHeader(uint64_t type)
 {
     std::cout << "+" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "+" << std::endl;
@@ -567,15 +588,22 @@ void InfoRAR5::printHeader(uint64_t type)
     std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
 }
 
-void InfoRAR5::printInfo(size_t index)
+
+
+void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 {
     int i = 0;
-    auto it = headers.begin();
-    for( ; it != headers.end(); it++, i++)
+    auto it_ = headers.begin();
+    auto it = it_;
+    std::vector<std::string> names;
+    for( ; it_ != headers.end(); it_++, i++) {
         if(i == index)
-            break;
+            it = it_;
+        names.push_back(std::string((*it_)->name.buff.begin(), (*it_)->name.buff.end()));
+    }
     Header *h = *it;
-
+    home();
+    clrscr();
     printHeader(header->type.number);
 
     printLine("CRC", h->crc.number, 'h');
@@ -605,6 +633,22 @@ void InfoRAR5::printInfo(size_t index)
         printLine("LAST ACCESS TIME", h->extra.time.atime);
 
     printLine(h->package_data);
+    for(int i = 0; i < names.size(); i++) {
+        gotoxy(FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 5, i + 1);
+        if(i == index) {
+            set_display_atrib(F_BLACK);
+            set_display_atrib(B_WHITE);
+            printName(names[i], keyboard);
+            resetcolor();
+        } else
+            printName(names[i], keyboard);
+    }
+//    std::cout << std::endl;
+//    printf(ESC"[6n");
 
-    std::cout << std::endl;
+//    std::cout << "cur pos = " << keyboard.getXPosCurrentCursor() << std::endl;
+
+//    std::cout << std::endl;
+//    std::cout << std::endl;
 }
+
