@@ -618,17 +618,21 @@ void InfoRAR5::deleteHeader(int index) {
 
     new_file.write(signature, sizeof (signature));
     i = 0;
-    std::streampos b = std::ios::beg + 8;
     auto it = headers.begin();
+    std::streampos b = (*it)->crc.begin;
     it++;
     for(; it != headers.end(); it++) {
         Header *h = *it;
         std::streampos e;
-        if(h->type.number == 5)
+        if(h->type.number == 5) {
             e = h->end_of_archive_flags.end;
-        else {
-            if(it == headers.end())
-                std::cout << std::endl;
+        } else if(h->type.number == 1) {
+            e = h->crc.begin;
+        } else if(h->type.number == 2) {
+            e = h->crc.begin;
+        } else if(h->type.number == 3) {
+            e = h->crc.begin;
+        } else if(h->type.number == 4) {
             e = h->crc.begin;
         }
         if(i != index) {
@@ -639,8 +643,6 @@ void InfoRAR5::deleteHeader(int index) {
             new_file.write(buff, size);
             delete []buff;
 
-        } else {
-            std::cout << "stop" << std::endl;
         }
         b = e;
         i++;
