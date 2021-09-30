@@ -347,12 +347,20 @@ void InfoRAR5::printSmthInfo()
 
 bool InfoRAR5::readNextBlock() {
     static int index = -1;
+    std::streampos save_pos = 0;
+    if(header != nullptr)
+        save_pos = header->crc.begin;
+
     try {
         index++;
-
         header = new Header;
+
+
         headers.push_back(header);//вставить в конец
         extractInt32(header->crc);
+
+        std::cout << "diff = " << (header->crc.begin - save_pos) << std::endl;
+
         extractVInteger(header->size_header);
 
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
@@ -398,6 +406,8 @@ bool InfoRAR5::readNextBlock() {
 //            printName();
             parseExtraArea();
             parseDataArea();
+            save_pos = header->package_data.end - header->crc.begin;
+//            std::cout << save_pos << std::endl;
 //            printInfo(index);
 //            std::cout << std::endl;
             break;
@@ -419,7 +429,7 @@ bool InfoRAR5::readNextBlock() {
     return true;
 }
 
-size_t InfoRAR5::getCountHeaders()
+size_t InfoRAR5::getSizeHeaders()
 {
     return headers.size();
 }
@@ -515,6 +525,7 @@ void InfoRAR5::printLine(TypeData &data)
         size_buff = MAX_SHOW_NUMBER_DATA_HEADER;
     else
         size_buff = data.length;
+//    std::cout << data.begin << " " << data.end - data.begin << std::endl;
     file->seekg(data.begin);
     char ch;
     std::string str;
@@ -524,6 +535,7 @@ void InfoRAR5::printLine(TypeData &data)
         str.push_back(digits[ch & 0x0F]);
         str.push_back(' ');
     }
+//    std::cout << data.begin << std::endl;
     size_t width = FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1;
     std::cout << "|" << fillStrCol("DATA", width) << std::endl;
     while(width < str.length()) {
@@ -537,59 +549,38 @@ void InfoRAR5::printLine(TypeData &data)
 
 void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
 {
-
-//    std::cout << fillStrCol(str, THIRD_COLUMN_WIDTH, ' ', 'l');
     int width_term, heigth_term;
     keyboard.get_terminal_size(width_term, heigth_term);
     int x;
-    int y;
     if(str.empty())
         str.push_back(' ');
+    int pos = keyboard.getCurPosCursor();
+    x = 0xFFFF & pos;
     char unicode[4];
     unicode[0] = ' ';
     int counter = 0;
+    std::string res;
     for(size_t i = 0; i < str.length(); i++) {
-        if(static_cast<uint8_t>(str[i]) < 0x7F) {
-            for(int j = 0; j < counter; j++)
-                std::cout << unicode[j];
-            counter = 0;
-            std::cout << str[i];
-        }
+        res.push_back(str[i]);
+        if(static_cast<uint8_t>(str[i]) < 0x7F)
+            x++;
         else {
-            if((str[i] & 0xF0) == 0xF0) {
-                for(int j = 0; j < counter; j++)
-                    std::cout << unicode[j];
-                counter = 0;
+            if((str[i] & 0xF0) == 0xF0)
+                x++;
+            else if((str[i] & 0xE0) == 0xE0)
+                x++;
+            else if((str[i] & 0xC0) == 0xC0)
+                x++;
+            else if(str[i] &  0x80 && !(str[i] & 0x40))
                 unicode[counter] = str[i];
-            } else if((str[i] & 0xE0) == 0xE0) {
-                for(int j = 0; j < counter; j++)
-                    std::cout << unicode[j];
-                counter = 0;
-                unicode[counter] = str[i];
-            } else if((str[i] & 0xC0) == 0xC0) {
-                for(int j = 0; j < counter; j++)
-                    std::cout << unicode[j];
-                counter = 0;
-                unicode[counter] = str[i];
-            } else if(str[i] &  0x80 && !(str[i] & 0x40)) {
-                unicode[counter] = str[i];
-            }
-            else
-                std::cout << "stop" << std::endl;
-            if(counter < 4) {
-                counter++;
-            } else
-                std::cout << unicode;
         }
-        int pos = keyboard.getCurPosCursor();
-        x = 0xFFFF & pos;
-        y = pos >> 16;
         if(x >= width_term)
-            return;
+            break;
     }
     x--;
-    std::string empty_space(width_term - x - 1, ' ');
-    std::cout << empty_space;
+    std::string empty_space(width_term - x - 1 , ' ');
+    std::cout << res << empty_space << std::flush;
+
 //    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
 //    if(header->state == STATE_SERVICE_HEADER) {
 //        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
@@ -604,6 +595,76 @@ void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
 //        else if(str == "RR")
 //            std::cout << "Recovery record";
 //    }
+}
+
+void InfoRAR5::deleteHeader(int index) {
+    // Проверяем индекс и можно ли этот хеадер удалить
+    int i = 0;
+//    Header *h;
+    for(auto it = headers.begin(); it != headers.end(); it++, i++)
+        if(i == index) {
+            if((*it)->type.number != 2) {
+                std::cout << "this header not allow deleting";
+                return;
+            }
+//            headers.erase(it);
+            break;
+        }
+    std::fstream new_file;
+    new_file.open("test2.rar", std::ios::out | std::ios::binary);
+    if(!new_file.is_open()) {
+        std::cout << "file not open" << std::endl;
+    }
+
+    new_file.write(signature, sizeof (signature));
+    i = 0;
+    std::streampos b = std::ios::beg + 8;
+    auto it = headers.begin();
+    it++;
+    for(; it != headers.end(); it++) {
+        Header *h = *it;
+        std::streampos e;
+        if(h->type.number == 5)
+            e = h->end_of_archive_flags.end;
+        else {
+            if(it == headers.end())
+                std::cout << std::endl;
+            e = h->crc.begin;
+        }
+        if(i != index) {
+            int size = e - b;
+            char *buff = new char[size];
+            file->seekg(b);
+            file->read(buff, size);
+            new_file.write(buff, size);
+            delete []buff;
+
+        } else {
+            std::cout << "stop" << std::endl;
+        }
+        b = e;
+        i++;
+
+//        if(h->type.number == 1) {
+//            char offset = 0;
+//            file->seekg(h->extra.locator.quick_open_offset.begin);
+//            file->write(&offset, 1);
+//        }
+//        if(h->type.number == 2) {
+//            int diff = h->package_data.end - h->package_data.begin;
+//            std::cout << diff << std::endl;
+//            int size = h->package_data.end - h->crc.begin;
+//            char *buff = new char[size];
+//            file->seekg(h->crc.begin);
+//            file->read(buff, size);
+//            new_file.write(buff, size);
+//            delete []buff;
+//        }
+
+    }
+    new_file.close();
+
+
 }
 
 void InfoRAR5::printHeader(uint64_t type)
@@ -636,17 +697,13 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 {
     int width_term, heigth_term;
     keyboard.get_terminal_size(width_term, heigth_term);
-    int i = 0;
     auto it_ = headers.begin();
     auto it = it_;
     std::vector<std::string> names;
-    for( ; it_ != headers.end(); it_++, i++) {
+    for(int i = 0; it_ != headers.end(); it_++, i++) {
         if(i == index)
             it = it_;
-//        if((*it_)->name.buff.empty())
-//            names.push_back(std::string(width_term - FIRST_COLUMN_WIDTH - SECOND_COLUMN_WIDTH - 3, ' '));
-//        else
-            names.push_back(std::string((*it_)->name.buff.begin(), (*it_)->name.buff.end()));
+        names.push_back(std::string((*it_)->name.buff.begin(), (*it_)->name.buff.end()));
     }
     Header *h = *it;
     home();
@@ -687,15 +744,10 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
             set_display_atrib(B_WHITE);
             printName(names[i], keyboard);
             resetcolor();
-        } else
+        } else {
             printName(names[i], keyboard);
+        }
     }
-//    std::cout << std::endl;
-//    printf(ESC"[6n");
-
-//    std::cout << "cur pos = " << keyboard.getXPosCurrentCursor() << std::endl;
-
-//    std::cout << std::endl;
-//    std::cout << std::endl;
+//    std::cout << std::flush;
 }
 

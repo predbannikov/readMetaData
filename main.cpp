@@ -16,10 +16,9 @@ int main(int argc, char* argv[])
     }
     try {
         if(!archive.open(argv[1]))
-        {
             std::cerr << "exit program" << std::endl;
-        }
-        archive.work();
+        else
+            archive.work();
     }  catch (...) {
         std::cerr << "unknown error" << std::endl;
         return -1;

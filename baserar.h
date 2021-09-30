@@ -25,10 +25,12 @@ public:
         end=file->tellg();
     };
 
-    virtual bool setStateHeader(){ return bool();};
-    virtual bool readNextBlock(){ return bool();};
-    virtual void printInfo(size_t index, Keyboard &keyboard) {};
-    virtual size_t getCountHeaders() { return 0; }
+    virtual bool setStateHeader() = 0; 								//{ return bool();};
+    virtual bool readNextBlock() = 0;								//{ return bool();};
+    virtual void printInfo(size_t index, Keyboard &keyboard) = 0;	//{};
+    virtual size_t getSizeHeaders() = 0;							//{ return 0; }
+    virtual void deleteHeader(int index) = 0;						//
+
     virtual ~BaseRAR() {};
 };
 

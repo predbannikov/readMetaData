@@ -72,7 +72,7 @@ unsigned long Keyboard::getCurPosCursor()
     unsigned long save_upper = 0;
     char ch = ' ';
     while(ch != 'R') {
-        ch = _getch();
+        ch = __getch();
         switch (ch) {
         case '[':
             break;
@@ -100,7 +100,7 @@ unsigned long Keyboard::getCurPosCursor()
     return pos;
 }
 
-int Keyboard::_getch(){
+int Keyboard::__getch(){
     char ch;
 #if defined (_WIN32)
     ch = getch();

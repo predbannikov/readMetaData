@@ -131,6 +131,9 @@ class InfoRAR5 : public BaseRAR{
     void printLine(TypeData &data);
     void printName(std::string &str, Keyboard &keyboard);
 
+    void deleteHeader(int index) override;
+
+
 
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
     static const char* digits;
@@ -143,7 +146,7 @@ public:
 
 // читать следующий блок одного из 5 Types of archive header
     bool readNextBlock() override;
-    size_t getCountHeaders() override;
+    size_t getSizeHeaders() override;
 };
 
 

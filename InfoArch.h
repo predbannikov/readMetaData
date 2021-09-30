@@ -65,32 +65,37 @@ public:
         return false;
     }
 
-    void work() {
-        parseKey();
-    }
 
-    void parseKey() {
+    void work() {
         int key = 48;
         int width, height;
-        size_t index = 0;
-        const size_t count_headers = rar->getCountHeaders();
+        int index = 0;
+        const int count_headers = rar->getSizeHeaders();
         while(key != 27 && key != 'q') {
-//            get_terminal_size(width, height);
             if(key == 'j') {
-                if(index < count_headers) {
+                if(index < count_headers - 1) {
                     index++;
-//                    rar->printInfo(index);
                 }
             }
             if(key == 'k')
                 if(index > 0) {
                     index--;
-//                    rar->printInfo(index);
                 }
+            if(key == 'h') {
+                if(index < count_headers - 1 - 10)
+                    index += 10;
+                else if (index < count_headers - 1)
+                    index = count_headers -1;
+            }
+            if(key == 'l')
+                if(index > 0 + 10)
+                    index -= 10;
+                else if(index > 0)
+                    index = 0;
+            if(key == 'd')
+                rar->deleteHeader(index);
             rar->printInfo(index, keyboard);
-            key = keyboard._getch();
-            std::this_thread::sleep_for(std::chrono::milliseconds(50));
-//            std::cout << key << " " << std::flush;
+            key = keyboard.__getch();
         }
     };
 };

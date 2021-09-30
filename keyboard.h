@@ -79,7 +79,7 @@ public:
     Keyboard();
     ~Keyboard();
     int kbhit();
-    int _getch();
+    int __getch();
 
     void get_terminal_size(int &width, int &height);
     unsigned long getCurPosCursor();
