@@ -97,6 +97,7 @@ public:
             rar->printInfo(index, keyboard);
             key = keyboard.__getch();
         }
+        clrscr();
     };
 };
 

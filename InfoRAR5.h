@@ -1,4 +1,4 @@
-﻿#ifndef INFORAR5_H
+#ifndef INFORAR5_H
 #define INFORAR5_H
 #include "baserar.h"
 #include <list>
@@ -6,29 +6,29 @@
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
-struct TypeData
-{
+struct TypePos {
     std::streampos begin;
     std::streampos end;
+};
+
+struct TypeData : TypePos
+{
     size_t length;
     std::vector<char> buff;
 };
-struct TypeVInt
+
+struct TypeVInt : TypePos
 {
-    std::streampos begin;
-    std::streampos end;
     uint64_t number;
 };
-struct TypeInt32
+
+struct TypeInt32 : TypePos
 {
-    std::streampos begin;
-    std::streampos end;
     uint32_t number;
 };
-struct TypeInt64
+
+struct TypeInt64 : TypeInt32
 {
-    std::streampos begin;
-    std::streampos end;
     uint64_t number;
 };
 
@@ -57,10 +57,12 @@ public:
         } locator;
         struct FileTime {
             TypeVInt flag;
-            std::string mtime;
-            std::string ctime;
-            std::string atime;
-
+            TypeInt64 mtime;
+            TypeInt64 ctime;
+            TypeInt64 atime;
+            std::string smtime;
+            std::string sctime;
+            std::string satime;
         } time;
     } extra;
 
@@ -71,6 +73,7 @@ public:
         std::list<QuickOpenHeader *> sub_headers;
     } service_data_area;
 
+    TypePos pos;
     TypeInt32 crc;
     TypeVInt size_data;
     TypeVInt size_header;    //Size of header data starting from Header type field and up to and including the optional extra area. This field must not be longer than 3 bytes in current implementation, resulting in 2 MB maximum header size
@@ -81,6 +84,7 @@ public:
     TypeVInt volume_number;
     TypeVInt unpack_size;
     TypeVInt attributes;
+    TypeInt32 mtime;
     TypeInt32 unpacked_crc;
     TypeVInt compres_info;
     TypeVInt host_os_creator;
@@ -116,21 +120,30 @@ class InfoRAR5 : public BaseRAR{
     void getSizeData();
     void getUnpackSize();
     void getCRCUnpackData();
+    std::string getTime(TypeInt64 &var);
+
     void extractVInteger(TypeVInt &vint_var);
     void extractData(TypeData &data_var, size_t length);
     void extractInt32(TypeInt32 &var);
     void extractInt64(TypeInt64 &var);
+
+    void changeMainHeader();
+
     std::vector<char> packVInt(uint64_t offset);
+
     void printFlagComm();
     void printFlagSpec();
 //    void printCRCData();
 //    void printCompresMethod();
-    u_int64_t getSizeHeader(size_t index);
+//    u_int64_t getSizeHeader(size_t index);
     void printSmthInfo();
-    uint32_t extract32Int_();
-    uint64_t extract64Int_();
+//    uint32_t extract32Int_();
+//    uint64_t extract64Int_();
     std::list<Header*> headers;
     Header *header = nullptr;
+    Header *main_header = nullptr;
+    Header *service_header = nullptr;
+    std::streampos service_pos_to_file;
     std::string test;
     std::string hexStrFromDec(uint32_t d);
     std::string fillStrCol(std::string s, size_t len, char ch = ' ', char allign = 'c'); // impl c,l
@@ -146,8 +159,16 @@ class InfoRAR5 : public BaseRAR{
     std::streampos m_pos;
     std::streampos m_pos_begin;
 
+    void expandVInt(std::vector<char> &v, int size_vint);
+    void debug_write(std::streampos beg, char *buff, int size, std::fstream *f);
+    Header *getHeaderOfIndex(int index);
+    uint32_t getCRC(std::streampos begin, std::streampos end, std::fstream *f);
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
     static const char* digits;
+
+    int mode = 0;
+    int index_to_delete = 0;
+    std::fstream *to_file;
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
@@ -156,8 +177,9 @@ public:
     void printInfo(size_t index, Keyboard &keyboard) override;
 
 // читать следующий блок одного из 5 Types of archive header
-    bool readNextBlock(std::fstream *to_file = nullptr) override;
+    bool readNextBlock() override;
     size_t getSizeHeaders() override;
+    void redirectToFile(TypePos var);
 };
 
 

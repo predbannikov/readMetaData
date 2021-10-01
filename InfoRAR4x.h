@@ -8,7 +8,7 @@ class InfoRAR4x : public BaseRAR{
 public:
     static const char signature[7];
     InfoRAR4x(std::fstream &file_);
-    bool readNextBlock(std::fstream *to_file = nullptr) override;
+    bool readNextBlock() override;
     ~InfoRAR4x();
 
 };
