@@ -8,7 +8,7 @@ InfoRAR4x::InfoRAR4x(std::fstream &file_):BaseRAR(file_){
 }
 
 
-bool InfoRAR4x::readNextBlock()
+bool InfoRAR4x::readNextBlock(std::fstream *to_file)
 {
 
     return false;

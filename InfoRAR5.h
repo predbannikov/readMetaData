@@ -25,6 +25,12 @@ struct TypeInt32
     std::streampos end;
     uint32_t number;
 };
+struct TypeInt64
+{
+    std::streampos begin;
+    std::streampos end;
+    uint64_t number;
+};
 
 struct QuickOpenHeader{
     TypeInt32 crc32;
@@ -37,6 +43,7 @@ struct QuickOpenHeader{
 
 class Header {
 public:
+    int index;
     Header();
     void display();
     struct GeneralExtraArea {
@@ -111,11 +118,14 @@ class InfoRAR5 : public BaseRAR{
     void getCRCUnpackData();
     void extractVInteger(TypeVInt &vint_var);
     void extractData(TypeData &data_var, size_t length);
-    void extractInt32(TypeInt32 &crc_var);
+    void extractInt32(TypeInt32 &var);
+    void extractInt64(TypeInt64 &var);
+    std::vector<char> packVInt(uint64_t offset);
     void printFlagComm();
     void printFlagSpec();
 //    void printCRCData();
 //    void printCompresMethod();
+    u_int64_t getSizeHeader(size_t index);
     void printSmthInfo();
     uint32_t extract32Int_();
     uint64_t extract64Int_();
@@ -133,7 +143,8 @@ class InfoRAR5 : public BaseRAR{
 
     void deleteHeader(int index) override;
 
-
+    std::streampos m_pos;
+    std::streampos m_pos_begin;
 
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
     static const char* digits;
@@ -145,7 +156,7 @@ public:
     void printInfo(size_t index, Keyboard &keyboard) override;
 
 // читать следующий блок одного из 5 Types of archive header
-    bool readNextBlock() override;
+    bool readNextBlock(std::fstream *to_file = nullptr) override;
     size_t getSizeHeaders() override;
 };
 

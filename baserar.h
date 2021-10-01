@@ -26,7 +26,7 @@ public:
     };
 
     virtual bool setStateHeader() = 0; 								//{ return bool();};
-    virtual bool readNextBlock() = 0;								//{ return bool();};
+    virtual bool readNextBlock(std::fstream *to_file = nullptr) = 0;								//{ return bool();};
     virtual void printInfo(size_t index, Keyboard &keyboard) = 0;	//{};
     virtual size_t getSizeHeaders() = 0;							//{ return 0; }
     virtual void deleteHeader(int index) = 0;						//
