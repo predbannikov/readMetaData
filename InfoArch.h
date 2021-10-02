@@ -72,21 +72,17 @@ public:
         int index = 0;
         const int count_headers = rar->getSizeHeaders();
         while(key != 27 && key != 'q') {
-            if(key == 'j') {
-                if(index < count_headers - 1) {
+            if(key == 'j')
+                if(index < count_headers - 1)
                     index++;
-                }
-            }
             if(key == 'k')
-                if(index > 0) {
+                if(index > 0)
                     index--;
-                }
-            if(key == 'h') {
+            if(key == 'h')
                 if(index < count_headers - 1 - 10)
                     index += 10;
                 else if (index < count_headers - 1)
                     index = count_headers -1;
-            }
             if(key == 'l')
                 if(index > 0 + 10)
                     index -= 10;

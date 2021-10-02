@@ -7,7 +7,7 @@
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
 struct TypePos {
-    std::streampos begin;
+    std::streampos beg;
     std::streampos end;
 };
 
@@ -93,6 +93,8 @@ public:
     TypeData package_data;
     TypeVInt end_of_archive_flags;
 
+    std::string sname;
+
     STATE_HEADER state = STATE_MARKER_HEADER;
     /* If flag 0x0008 is set, unpacked size field is still present,
      * but must be ignored and extraction must be performed until reaching the end of compression stream.
@@ -120,6 +122,7 @@ class InfoRAR5 : public BaseRAR{
     void getSizeData();
     void getUnpackSize();
     void getCRCUnpackData();
+    void getQuickOpenHeader(QuickOpenHeader *q, int index);
     std::string getTime(TypeInt64 &var);
 
     void extractVInteger(TypeVInt &vint_var);
@@ -129,16 +132,11 @@ class InfoRAR5 : public BaseRAR{
 
     void changeMainHeader();
 
-    std::vector<char> packVInt(uint64_t offset);
+    std::vector<char> packVInt(uint64_t vint);
 
     void printFlagComm();
     void printFlagSpec();
-//    void printCRCData();
-//    void printCompresMethod();
-//    u_int64_t getSizeHeader(size_t index);
     void printSmthInfo();
-//    uint32_t extract32Int_();
-//    uint64_t extract64Int_();
     std::list<Header*> headers;
     Header *header = nullptr;
     Header *main_header = nullptr;
@@ -160,14 +158,16 @@ class InfoRAR5 : public BaseRAR{
     std::streampos m_pos_begin;
 
     void expandVInt(std::vector<char> &v, int size_vint);
-    void debug_write(std::streampos beg, char *buff, int size, std::fstream *f);
+    void debug_write(std::streampos beg, char *buff, int size);
     Header *getHeaderOfIndex(int index);
-    uint32_t getCRC(std::streampos begin, std::streampos end, std::fstream *f);
+    uint32_t getCRC(std::streampos begin, std::streampos end);
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);
     static const char* digits;
 
+    void writeVIntOffset(const TypeVInt &vint, int num_vint);
+    void writeInt32Offset(std::streampos target_pos, uint32_t num);
     int mode = 0;
-    int index_to_delete = 0;
+    int index_to_delete = -1;
     std::fstream *to_file;
 public:
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
@@ -177,9 +177,10 @@ public:
     void printInfo(size_t index, Keyboard &keyboard) override;
 
 // читать следующий блок одного из 5 Types of archive header
+    bool append_to_list = true;
     bool readNextBlock() override;
     size_t getSizeHeaders() override;
-    void redirectToFile(TypePos var);
+    void redirectToFile(TypePos &var);
 };
 
 

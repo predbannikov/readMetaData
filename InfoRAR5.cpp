@@ -23,113 +23,168 @@ InfoRAR5::~InfoRAR5()
         delete *it;
 }
 
+void InfoRAR5::debug_write(std::streampos beg, char *buff, int size)
+{
+    std::fstream f;
+    f.open("test2.rar", std::ios::in | std::ios::binary);
+    if(!f.is_open()) {
+        std::cout << "file not opening to write" << std::endl;
+        return;
+    }
+    f.seekg(beg);
+    f.read(buff, size);
+    f.close();
+}
 
-//void InfoRAR5::printCRCData()
-//{
-//    if(header->flags_specific.number & 0x04)
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 of unpacked file or service data:"
-//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::hex << header->unpacked_crc.number << std::dec << std::endl;
-//}
+void InfoRAR5::deleteHeader(int index) {
+    // Проверить индекс и можно ли этот хеадер удалить
+    int i = 0;
+    index_to_delete = index;
+    mode = 1;
+    to_file = new std::fstream;
+    to_file->open("test2.rar", std::ios::out | std::ios::trunc | std::ios::ate | std::ios::binary);
+    if(!to_file->is_open()) {
+        std::cout << "file not open" << std::endl;
+        throw;
+    }
+    headers.clear();
+    file->seekg(std::ios::beg + 8);
+    to_file->write(signature, sizeof (signature));
+    std::streampos save_pos = to_file->tellp();
+    std::streampos file_pos = file->tellg();
+    to_file->sync();
+    while(readNextBlock()) { }
+    to_file->close();
+}
 
-//void InfoRAR5::printCompresMethod()
-//{
-//    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
-//    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: "
-//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
-//}
+Header *InfoRAR5::getHeaderOfIndex(int index)
+{
+    for(auto it = headers.begin(); it != headers.end(); it++) {
+        if((*it)->index == index)
+            return *it;
+    }
+    return nullptr;
+}
 
 void InfoRAR5::parseDataArea()
 {
-    auto lambda = [](const char &byte) {
-        return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
-    };
+//    auto lambda = [](const char &byte) { return byte>31; }; // всё кроме непечатаемых символов (из ASCII до 31)
     if(header->flags_common.number & 0x02) {
         switch (header->state) {
         case STATE_FILE_HEADER:
-//            std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Data area:" << std::endl;
-//            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
-//                << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_data.number) << std::endl;
-//            std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << "\"" ;
             extractData(header->package_data, header->size_data.number);
-//            if(MAX_SHOW_NUMBER_DATA_HEADER < header->size_data.number) {
-//                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.begin()+MAX_SHOW_NUMBER_DATA_HEADER, std::ostream_iterator<char>(std::cout), lambda);
-//                std::cout << "...\"" << std::endl;
-//            } else {
-//                std::copy_if(header->package_data.buff.begin(), header->package_data.buff.end(), std::ostream_iterator<char>(std::cout), lambda);
-//                std::cout << "\"" << std::endl;
-//            }
             break;
         case STATE_SERVICE_HEADER:
+            std::streampos begin_pos_to_file_;
             if(mode == 1) {
+
+                to_file->sync();
                 changeMainHeader();
+                to_file->sync();
+
+                begin_pos_to_file_ = to_file->tellp();
+                std::cout << begin_pos_to_file_ << std::endl;
+                std::cout << std::endl;
             }
             std::streampos begin_pos = file->tellg();
             int counter = 0;
-            while(header->size_data.number != file->tellg()-begin_pos) {
+            while(header->size_data.number != file->tellg() - begin_pos) {
                 counter++;
-                if(mode == 1 && counter == index_to_delete)
-                    continue;
                 QuickOpenHeader *a = new QuickOpenHeader;
                 header->service_data_area.sub_headers.push_back(a);
-                extractInt32(a->crc32);
-//                std::cout << a->crc32.number << " crc32" << std::endl;
-                extractVInteger(a->size);
-//                std::cout << a->size.number << " struct size" << std::endl;
-                extractVInteger(a->flags);
-//                std::cout << a->flags.number << " flags" << std::endl;
-                extractVInteger(a->offset);
-//                std::cout << a->offset.number << " offset" << std::endl;
-                extractVInteger(a->data_size);
-//                std::cout << a->data_size.number << " size archive data" << std::endl;
-                extractData(a->data, a->data_size.number);
-                std::cout << std::string(a->data.buff.begin(), a->data.buff.end()) << std::endl;
-                if(file->eof()) {
-                    std::cout << std::endl << "eof" << std::endl;
-                    throw std::runtime_error("unexpected eof");
-                }
-                if(mode == 1) {
-                    std::streampos save_pos = to_file->tellp();
-//                    std::streampos pos_to = service_header->pos.begin;
-//                    pos_to -= getHeaderOfIndex(counter)->pos.begin;
-                    to_file->seekp(getHeaderOfIndex(counter)->pos.begin);
-                    int offset = service_pos_to_file - to_file->tellg();
-                    std::vector<char> vint;
-                    vint = packVInt(offset);
-                    int size_offset = a->offset.end - a->offset.begin;
-                    expandVInt(vint, size_offset);
-//                    for(int i = vint.size(); i < size_offset; i++)
-//                        if(i == size_offset-1)
-//                            vint.push_back(0);
-//                        else
-//                            vint.push_back(0x80);
-
-//                    readNextBlock();
-                    to_file->write(vint.data(), vint.size());
-                    to_file->seekp(save_pos);
-                }
+                if(counter == index_to_delete)
+                    mode = 0;
+                getQuickOpenHeader(a, counter);
+                if(counter == index_to_delete)
+                    mode = 1;
+            }
+            if(mode == 1) {
+                int size_data = to_file->tellp() - begin_pos_to_file_;
+                writeVIntOffset(header->size_data, size_data);
+                writeVIntOffset(header->unpack_size, size_data);
             }
             break;
         }
     }
 }
 
-void InfoRAR5::redirectToFile(TypePos var)
+void InfoRAR5::getQuickOpenHeader(QuickOpenHeader *a, int index)
+{
+    extractInt32(a->crc32);
+    extractVInteger(a->size);
+    extractVInteger(a->flags);
+    extractVInteger(a->offset);
+    extractVInteger(a->data_size);
+    extractData(a->data, a->data_size.number);
+    std::cout << std::string(a->data.buff.begin(), a->data.buff.end()) << std::endl;
+    if(file->eof()) {
+        std::cout << std::endl << "eof" << std::endl;
+        throw std::runtime_error("unexpected eof");
+    }
+
+//    std::streampos save_pos = file->tellg();
+//    std::streampos test_offset = header->pos.beg;
+//    test_offset -= a->offset.number;
+//    file->seekg(test_offset);
+
+//    Header *head_tmp = header;
+//    append_to_list = false;
+//    readNextBlock();
+//    append_to_list = true;
+//    header = head_tmp;
+//    file->seekg(save_pos);
+
+    if(mode == 1) {
+        Header *h = getHeaderOfIndex(index);
+        int offset = service_pos_to_file - h->pos.beg;
+
+
+//        std::streampos save_pos = file->tellg();
+//        file->close();
+//        file->open("test2.rar", std::ios::in | std::ios::binary);
+//        if(!file->is_open()) {
+//            std::cout << "file not found" << std::endl;
+//            return ;
+//        }
+//        test_offset = service_pos_to_file;
+//        test_offset -= offset;
+//        file->seekg(test_offset);
+//        std::cout << std::endl;
+////        readNextBlock();
+
+//        file->close();
+//        file->open("test.rar", std::ios::in | std::ios::binary);
+//        if(!file->is_open()) {
+//            std::cout << "file not found" << std::endl;
+//            return ;
+//        }
+//        file->seekg(save_pos);
+
+        writeVIntOffset(a->offset, offset);
+        writeInt32Offset(a->crc32.beg, getCRC(a->crc32.end, a->data_size.end));
+    }
+}
+
+void InfoRAR5::redirectToFile(TypePos &var)
 {
     if(index_to_delete == header->index)
         return;
     if(mode == 1) {
         TypePos new_pos;
-        new_pos.begin = to_file->tellp();
-        int size = var.end - var.begin;
+        new_pos.beg = to_file->tellp();
+        int size = var.end - var.beg;
         char *buff = new char[size];
-        file->seekg(var.begin);
+        file->seekg(var.beg);
         file->read(buff, size);
         to_file->write(buff, size);
         new_pos.end = to_file->tellp();
+        if(new_pos.beg == -1) {
+            std::cout << "stop";
+        }
         delete []buff;
         file->seekg(var.end);
-//        var.begin = new_pos.begin;
-//        var.end = new_pos.end;
+        var.beg = new_pos.beg;
+        var.end = new_pos.end;
     }
 }
 
@@ -137,7 +192,7 @@ void InfoRAR5::extractVInteger(TypeVInt &var) {
 
     uint64_t result=0;
     std::streampos pos= file->tellg();
-    var.begin=pos;
+    var.beg=pos;
     for (uint8_t shift=0; pos != end; shift+=7)
     {
         if(file->eof())
@@ -159,7 +214,7 @@ void InfoRAR5::extractVInteger(TypeVInt &var) {
 
 void InfoRAR5::extractData(TypeData &data_var, size_t length)
 {
-    data_var.begin = file->tellg();
+    data_var.beg = file->tellg();
     data_var.buff.resize(length);
     file->read(data_var.buff.data(), length);
     data_var.end = file->tellg();
@@ -169,7 +224,7 @@ void InfoRAR5::extractData(TypeData &data_var, size_t length)
 
 void InfoRAR5::extractInt32(TypeInt32 &var)
 {
-    var.begin=file->tellg();
+    var.beg=file->tellg();
     char buff[4];
     //char tmp;
     for (int i = 0; i < 4; i++)
@@ -179,7 +234,6 @@ void InfoRAR5::extractInt32(TypeInt32 &var)
         file->read(&buff[i], 1);
         // file->read(&tmp, 1);
         // tmp2 |= (static_cast<uint32_t>(0xFF&tmp)) << 8*i;
-
     }
     var.number = *reinterpret_cast<const uint32_t*>(buff);
     var.end = file->tellg();
@@ -188,7 +242,7 @@ void InfoRAR5::extractInt32(TypeInt32 &var)
 
 void InfoRAR5::extractInt64(TypeInt64 &var)
 {
-    var.begin=file->tellg();
+    var.beg=file->tellg();
     char buff[8];
     for (int i = 0; i < 8; i++)
     {
@@ -203,84 +257,65 @@ void InfoRAR5::extractInt64(TypeInt64 &var)
 
 void InfoRAR5::changeMainHeader()
 {
-
-//    file->seekg(main_header->pos.begin);
-//    readNextBlock();
-
     std::streampos save_pos = to_file->tellp();
-    std::vector<char> vint;
-    int offset = header->pos.begin - main_header->pos.begin;
-    vint = packVInt(offset);
-    int size_offset = main_header->extra.locator.quick_open_offset.end - main_header->extra.locator.quick_open_offset.begin;
-    expandVInt(vint, size_offset);
-//    if(vint.size() < size_offset) {
-//        vint[vint.size()-1] |= 0x80;
-//        for(int i = vint.size(); i < size_offset; i++)
-//            if(i == size_offset-1)
-//                vint.push_back(0);
-//            else
-//                vint.push_back(0x80);
-//    }
 
-//    char *buff = new char[18];
-//    debug_write(main_header->pos.begin, buff, 18, file);
-//    std::cout << "stop" << std::endl;
+//    char buff1[18];
+//    debug_write(main_header->pos.beg, buff1, 18);
+//    std::cout << "1: ";
+//    for(int i = 0; i < 18; i++)
+//        std::cout << std::hex << (0xFF&buff1[i]);
+//    std::cout << std::endl;
 
-    to_file->seekp(main_header->extra.locator.quick_open_offset.begin);
-    to_file->write(vint.data(), vint.size());
-
-//    char buff2[18];
-//    debug_write(main_header->pos.begin, buff2, sizeof(buff2), to_file);
-//    std::cout << "stop" << std::endl;
-
-    uint32_t crc = getCRC(main_header->crc.end, main_header->pos.end, to_file);
-//    vint = packVInt(crc);
-//    to_file->write(vint.data(), vint.size());
-    to_file->seekp(main_header->crc.begin);
-    to_file->write(reinterpret_cast<char*>(&crc), 4);
-    to_file->seekp(save_pos);
+    writeVIntOffset(main_header->extra.locator.quick_open_offset, header->pos.beg - main_header->pos.beg);
+    writeInt32Offset(main_header->crc.beg, getCRC(main_header->crc.end, main_header->pos.end));
 }
 
-std::vector<char> InfoRAR5::packVInt(uint64_t offset)
+void InfoRAR5::expandVInt(std::vector<char> &v, int size_vint)
+{
+    if(v.empty())
+        return;
+    if(v.size() < size_vint) {
+        v[v.size()-1] |= 0x80;
+        for(int i = v.size(); i < size_vint; i++)
+            if(i == size_vint-1)
+                v.push_back(0);
+            else
+                v.push_back(0x80);
+    }
+}
+
+std::vector<char> InfoRAR5::packVInt(uint64_t vint)
 {
     std::vector<char> result;
     int counter = 0;
-    while(offset > 0x7F) {
-        uint8_t tmp = 0x7F & offset;
-        offset >>= 7;
+    while(vint > 0x7F) {
+        uint8_t tmp = 0x7F & vint;
+        vint >>= 7;
         tmp |= 0x80;
         result.push_back(tmp);
     }
-    if(offset > 0)
-        result.push_back(0xFF&offset);
+    if(vint > 0)
+        result.push_back(0xFF&vint);
     return result;
 }
 
-//uint32_t InfoRAR5::extract32Int_()
-//{
-//    char buff[4];
-//    for (int i=0; i<4; i++)
-//    {
-//        if(file->eof())
-//            throw std::runtime_error("extract32Int_ error");
-//        file->read(&buff[i], 1);
-
-//    }
-//    return *reinterpret_cast<const uint32_t*>(buff);
-//}
-
-//uint64_t InfoRAR5::extract64Int_()
-//{
-//    char buff[8];
-//    for (int i=0; i<8; i++)
-//    {
-//        if(file->eof())
-//            throw std::runtime_error("extract64Int error");
-//        file->read(&buff[i], 1);
-//    }
-//    return *reinterpret_cast<const uint64_t*>(buff);
-//}
-
+uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end)
+{
+    std::ifstream f;
+    f.open("test2.rar");
+    if(!f.is_open()) {
+        std::cerr << "file not open" << std::endl;
+        throw std::runtime_error("file not opeing");
+    }
+    int size_for_crc = end - begin;
+    std::vector<char> buff(size_for_crc);
+    f.seekg(begin);
+    f.read(buff.data(), size_for_crc);
+    f.close();
+    std::vector<unsigned char>for_crc(size_for_crc);
+    std::copy(buff.begin(), buff.end(), for_crc.begin());
+    return CRC32_function(for_crc.data(), size_for_crc);
+}
 
 unsigned int InfoRAR5::CRC32_function(unsigned char *buf, unsigned long len) // для будущего удаления
 {
@@ -299,6 +334,35 @@ unsigned int InfoRAR5::CRC32_function(unsigned char *buf, unsigned long len) // 
     return crc ^ 0xFFFFFFFFUL;
 }
 
+void InfoRAR5::writeVIntOffset(const TypeVInt &vint, int num_vint)
+{
+    std::fstream f;
+    f.open("test2.rar", std::fstream::out | std::fstream::in | std::fstream::binary);
+    if(!f.is_open()) {
+        std::cout << "file not open" << std::endl;
+        return ;
+    }
+    std::vector<char> vvint = packVInt(num_vint);
+    int diff = vint.end - vint.beg;
+    expandVInt(vvint, diff);
+    f.seekp(vint.beg);
+    f.write(vvint.data(), vvint.size());
+    f.close();
+}
+
+void InfoRAR5::writeInt32Offset(std::streampos target_pos, uint32_t num)
+{
+    std::fstream f;
+    f.open("test2.rar", std::fstream::out | std::fstream::in | std::fstream::binary);
+    if(!f.is_open()) {
+        std::cout << "file not open" << std::endl;
+        return ;
+    }
+    f.seekp(target_pos);
+    f.write(reinterpret_cast<char*>(&num), 4);
+    f.close();
+}
+
 #define WINDOWS_TICK 10000000
 #define SEC_TO_UNIX_EPOCH 11644473600LL
 unsigned WindowsTickToUnixSeconds(long long windowsTicks)
@@ -309,39 +373,21 @@ unsigned WindowsTickToUnixSeconds(long long windowsTicks)
 void InfoRAR5::parseExtraArea()
 {
     if(header->flags_common.number & 0x01) {
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Extra area:" << std::endl;
-//        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "size: "
-//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->size_extra_area.number) << std::endl;
-
         extractVInteger(header->extra.size);
-//        std::cout << "size of record data starting from TYPE " << header->extra.size.number << std::endl;
         extractVInteger(header->extra.type);
-//        std::cout << "type_extra " << header->extra.type.number << std::endl;
         switch (header->state) {
-        case STATE_MAIN_HEADER: {
-//            if(header->extra.type.number == 0x01)
-//                std::cout << "locator record: type " << std::endl;
+        case STATE_MAIN_HEADER:
+//            if(header->extra.type.number == 0x01)                std::cout << "locator record: type " << std::endl;
             extractVInteger(header->extra.locator.flags);
             if( header->extra.locator.flags.number & 0x01) {
-//                std::streampos save_tmp = file->tellg();
-//                char buff[7];
-//                file->read(buff, 7);
-//                file->seekg(save_tmp);
-                std::streampos tmp_pos1 = file->tellg();
                 extractVInteger(header->extra.locator.quick_open_offset);
-                std::cout << "diff " << file->tellg() - tmp_pos1 << std::endl;
-//                std::vector<char> ddd = packVInt(header->extra.locator.quick_open_offset.number);
-//                std::cout << "stop" << std::endl;
-//                std::cout << "Quick open record offset is present. " << header->extra.locator.quick_open_offset.number << std::endl;
+//                file->seekg(header->extra.locator.quick_open_offset.number + header->pos.beg);
+//                readNextBlock();
             }
-            if( header->extra.locator.flags.number & 0x02) {
-                extractVInteger(header->extra.locator.recovery_offset);
-//                std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
-            }
-
-
+            if( header->extra.locator.flags.number & 0x02)
+                extractVInteger(header->extra.locator.recovery_offset);		//  std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
             break;
-        }
+
         case STATE_FILE_HEADER:
         case STATE_SERVICE_HEADER:
             switch (header->extra.type.number) {
@@ -349,7 +395,7 @@ void InfoRAR5::parseExtraArea()
                 break;
             case 0x02:
                 break;
-            case 0x03: {
+            case 0x03:
                 extractVInteger(header->extra.time.flag);
                 if(header->extra.time.flag.number & 0x0002)
                     header->extra.time.smtime = getTime(header->extra.time.mtime);
@@ -358,7 +404,6 @@ void InfoRAR5::parseExtraArea()
                 else if(header->extra.time.flag.number & 0x0008)
                     header->extra.time.satime = getTime(header->extra.time.atime);
                 break;
-            }
             case 0x04:
                 break;
             case 0x05:
@@ -389,20 +434,14 @@ std::string InfoRAR5::getTime(TypeInt64 &var)
 
 void InfoRAR5::getCRCUnpackData()
 {
-    if(header->flags_specific.number & 0x04) {
+    if(header->flags_specific.number & 0x04)
         extractInt32(header->unpacked_crc);
-    }
 }
 
 void InfoRAR5::getFileModifTime()
 {
-    if(header->flags_specific.number & 0x02)  {
+    if(header->flags_specific.number & 0x02)
         extractInt32(header->mtime);
-//        uint32_t header_mtime = extract32Int_();
-
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Modification time in Unix time format:"
-//            << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header_mtime) << std::endl;
-    }
 }
 
 void InfoRAR5::getExtraAreaSize()
@@ -426,41 +465,6 @@ void InfoRAR5::getUnpackSize()
     extractVInteger(header->unpack_size);
 }
 
-void InfoRAR5::printFlagComm()
-{
-    if(header->flags_common.number & 0x01)
-        std::cout << "Extra area is present in the end of header." << std::endl;
-    else if(header->flags_common.number & 0x02)
-        std::cout << "Data area is present in the end of header." << std::endl;
-    else if(header->flags_common.number & 0x04)
-        std::cout << "Blocks with unknown type and this flag must be skipped when updating an archive." << std::endl;
-    else if(header->flags_common.number & 0x08)
-        std::cout << "Data area is continuing from previous volume." << std::endl;
-    else if(header->flags_common.number & 0x10)
-        std::cout << "Data area is continuing in next volume." << std::endl;
-    else if(header->flags_common.number & 0x20)
-        std::cout << "Block depends on preceding file block." << std::endl;
-    else if(header->flags_common.number & 0x40)
-        std::cout << "Preserve a child block if host block is modified." << std::endl;
-}
-
-//u_int64_t InfoRAR5::getSizeHeader(size_t index)
-//{
-//    int i = 0;
-//    std::streampos beg = std::ios::beg;
-//    beg += 8;
-//    for(auto it = headers.begin(); it != headers.end(); it++) {
-//        if((*it)->index == index) {
-//            if((*it)->type.number == 5)
-//                return (*it)->crc.begin - (*it)->end_of_archive_flags.end;
-//            else
-//                return (*it)->crc.begin - beg;
-//        }
-//        beg = (*it)->crc.begin;
-//    }
-//    return 0;
-//}
-
 bool InfoRAR5::setStateHeader()
 {
     extractVInteger(header->type);
@@ -468,24 +472,19 @@ bool InfoRAR5::setStateHeader()
     case 1:
         main_header = header;
         header->state = STATE_MAIN_HEADER;
-//        std::cout << "BLOCK MAIN HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 2:
         header->state = STATE_FILE_HEADER;
-//        std::cout << "BLOCK FILE HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 3:
         service_header = header;
         if(mode == 1)
-            service_pos_to_file = to_file->tellp();
+            service_pos_to_file = header->pos.beg;
         header->state = STATE_SERVICE_HEADER;
-//        std::cout << "BLOCK SERVICE HEAD size = " << header->size_header.number << std::endl;
         return true;
     case 4:
-//        std::cout << "this is encryption header" << std::endl;
         return false;
     case 5:
-//        std::cout << "BLOCK END_OF_ARCHIVE HEAD size = " << header->size_header.number << std::endl;
         header->state = STATE_END_OF_ARCHIVE;
         return true;
     default:							// ошибка, случилось непредвиденное
@@ -494,39 +493,20 @@ bool InfoRAR5::setStateHeader()
     return false;
 }
 
-void InfoRAR5::printSmthInfo()
-{
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size.number) << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes.number) << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
-    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
-}
-
 bool InfoRAR5::readNextBlock() {
-
-
     bool status = true;
 
-//    static int index = -1;
-//    m_pos_begin = file->tellg();
-//    std::streampos save_pos = 0;
-//    if(header != nullptr)
-//        save_pos = header->crc.begin;
-
     try {
-//        index++;
         header = new Header;
         header->index = headers.size();
-        header->pos.begin = file->tellg();
-
-//        if(mode != 1)
-        headers.push_back(header);//вставить в конец
+        if(mode == 1)
+            header->pos.beg = to_file->tellp();
+        else
+            header->pos.beg = file->tellg();
+        if(append_to_list)
+            headers.push_back(header);//вставить в конец
         extractInt32(header->crc);
-
-//        std::cout << "diff = " << (header->crc.begin - save_pos) << std::endl;
-
         extractVInteger(header->size_header);
-
         if(!setStateHeader()) 			// если не один из типов, то есть попалось инородное
             status = false;
 
@@ -534,34 +514,13 @@ bool InfoRAR5::readNextBlock() {
         case STATE_MARKER_HEADER:
             break;
         case STATE_MAIN_HEADER:{
-//            main_header = header;
-//            auto begin_header_pos = file->tellg();
-//            char buff[18];
-//            debug_write(main_header->pos.begin, buff, 18, file);
             extractVInteger(header->flags_common);
             getExtraAreaSize();
             extractVInteger(header->flags_specific);
             printFlagComm();
             parseExtraArea();
-            if(header->flags_specific.number & 0x02) {
+            if(header->flags_specific.number & 0x02)
                 extractVInteger(header->volume_number);
-//                std::cout << "number volume " << header->volume_number.number << std::endl;
-            }
-//            if(header->flags_common.number & 0x01) {
-//                std::cout << "parse offset data" << std::endl;
-//            }
-//            getCRC(header->crc.begin, file->tellg(), file);
-//            std::streampos pos_save1 = header->crc.end;
-//            std::streampos pos_save2 = header->extra.locator.quick_open_offset.end;
-//            int size_for_crc = pos_save2 - pos_save1;
-//            std::vector<char> buff(size_for_crc);
-//            std::streampos save_current_pos = file->tellg();
-//            file->seekg(pos_save1);
-//            file->read(buff.data(), size_for_crc);
-//            std::cout << std::hex << header->crc.number << std::endl;
-//            std::vector<unsigned char>for_crc(size_for_crc);
-//            std::copy(buff.begin(), buff.end(), for_crc.begin());
-//            std::cout << std::hex << CRC32_function(for_crc.data(), size_for_crc) << std::endl;
             break;
         }
         case STATE_FILE_HEADER:
@@ -578,26 +537,17 @@ bool InfoRAR5::readNextBlock() {
             extractVInteger(header->host_os_creator);
             extractVInteger(header->length_name);
             extractData(header->name, header->length_name.number);
-            std::cout << std::string(header->name.buff.begin(), header->name.buff.end()) << std::endl;
+
+            header->sname = std::string(header->name.buff.begin(), header->name.buff.end());
+            std::cout << header->sname << std::endl;
             // ------------ area print specific header data --------------------
-//            printFlagSpec();
-//            printCRCData();
-//            printCompresMethod();
-//            printFlagComm();
-//            printSmthInfo();
-//            printName();
             parseExtraArea();
             parseDataArea();
-//            save_pos = header->package_data.end - header->crc.begin;
-//            std::cout << save_pos << std::endl;
-//            printInfo(header->index);
-//            std::cout << std::endl;
             break;
 
         case STATE_END_OF_ARCHIVE:
             extractVInteger(header->flags_common);
             extractVInteger(header->end_of_archive_flags);
-//            printInfo(index);
             if(header->end_of_archive_flags.number == 0x01)
                 std::cout << "it is not last volume in the set"<< std::endl;
             else
@@ -608,8 +558,11 @@ bool InfoRAR5::readNextBlock() {
         std::cerr << "ERROR: [" << errno << "] " << e.what() << std::endl;		// ... какая-то ошибка
         status = false;
     }
-    header->pos.end = file->tellg();
-    std::cout << "size header = " << header->pos.end - header->pos.begin << std::endl;
+    if(mode == 1)
+        header->pos.end = to_file->tellp();
+    else
+        header->pos.end = file->tellg();
+    std::cout << "size header = " << header->pos.end - header->pos.beg << std::endl;
     return status;
 }
 
@@ -618,28 +571,13 @@ size_t InfoRAR5::getSizeHeaders()
     return headers.size();
 }
 
-
 Header::Header() {
 
 }
 
-///*Flags specific for file header type:
-//            0x0001   Directory file system object (file header only).
-//            0x0002   Time field in Unix format is present.
-//            0x0004   CRC32 field is present.
-//            0x0008   Unpacked size is unknown.*/
-//void InfoRAR5::printFlagSpec()
-//{
-//    if(header->flags_specific.number & 0x1)
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
-//    if(header->flags_specific.number & 0x2)
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
-//    if(header->flags_specific.number & 0x4)
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
-//    if(header->flags_specific.number & 0x8)
-//        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
-//}
-
+//**********************************************************************************************
+//**
+//**********************************************************************************************
 #define FIRST_COLUMN_WIDTH	16
 #define SECOND_COLUMN_WIDTH 24
 #define THIRD_COLUMN_WIDTH	32
@@ -698,7 +636,7 @@ void InfoRAR5::printLine(std::string first, char ch)
 
 void InfoRAR5::printLine(TypeData &data)
 {
-    if(data.begin == data.end)
+    if(data.beg == data.end)
         return;
     auto lambda = [](const char &byte) {
         return byte>31; // всё кроме непечатаемых символов (из ASCII до 31)
@@ -709,8 +647,7 @@ void InfoRAR5::printLine(TypeData &data)
         size_buff = MAX_SHOW_NUMBER_DATA_HEADER;
     else
         size_buff = data.length;
-//    std::cout << data.begin << " " << data.end - data.begin << std::endl;
-    file->seekg(data.begin);
+    file->seekg(data.beg);
     char ch;
     std::string str;
     for(size_t i = 0; i < size_buff; i++) {
@@ -719,7 +656,6 @@ void InfoRAR5::printLine(TypeData &data)
         str.push_back(digits[ch & 0x0F]);
         str.push_back(' ');
     }
-//    std::cout << data.begin << std::endl;
     size_t width = FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1;
     std::cout << "|" << fillStrCol("DATA", width) << std::endl;
     while(width < str.length()) {
@@ -729,6 +665,50 @@ void InfoRAR5::printLine(TypeData &data)
     std::cout << "|" << fillStrCol(str, width);
     std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
     file->seekg(save_pos);
+}
+
+void InfoRAR5::printSmthInfo()
+{
+    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked file or service data size:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->unpack_size.number) << std::endl;
+    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Operating system specific file attributes:" << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->attributes.number) << std::endl;
+    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Compression information:" << std::endl;
+    std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT) << "method: " << std::setw(EMPTY_SPACE_RIGHT_NUMBER) << std::to_string(header->compres_info.number & 0x0380) << std::endl;
+}
+
+/* Flags specific for file header type:
+ * 0x0001   Directory file system object (file header only).
+ * 0x0002   Time field in Unix format is present.
+ * 0x0004   CRC32 field is present.
+ * 0x0008   Unpacked size is unknown.
+*/
+void InfoRAR5::printFlagSpec()
+{
+    if(header->flags_specific.number & 0x1)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Directory file system object." << std::endl;
+    if(header->flags_specific.number & 0x2)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Time field in Unix format is present." << std::endl;
+    if(header->flags_specific.number & 0x4)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "CRC32 field is present. " << std::endl;
+    if(header->flags_specific.number & 0x8)
+        std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Unpacked size is unknown. " << std::endl;
+}
+
+void InfoRAR5::printFlagComm()
+{
+    if(header->flags_common.number & 0x01)
+        std::cout << "Extra area is present in the end of header." << std::endl;
+    else if(header->flags_common.number & 0x02)
+        std::cout << "Data area is present in the end of header." << std::endl;
+    else if(header->flags_common.number & 0x04)
+        std::cout << "Blocks with unknown type and this flag must be skipped when updating an archive." << std::endl;
+    else if(header->flags_common.number & 0x08)
+        std::cout << "Data area is continuing from previous volume." << std::endl;
+    else if(header->flags_common.number & 0x10)
+        std::cout << "Data area is continuing in next volume." << std::endl;
+    else if(header->flags_common.number & 0x20)
+        std::cout << "Block depends on preceding file block." << std::endl;
+    else if(header->flags_common.number & 0x40)
+        std::cout << "Preserve a child block if host block is modified." << std::endl;
 }
 
 void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
@@ -762,158 +742,8 @@ void InfoRAR5::printName(std::string &str, Keyboard &keyboard)
     x--;
     std::string empty_space(width_term - x - 1 , ' ');
     std::cout << res << empty_space << std::flush;
-
-//    std::cout << std::setw(EMPTY_SPACE_LEFT) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT) << "Name:" << str << std::endl;
-//    if(header->state == STATE_SERVICE_HEADER) {
-//        std::cout << std::setw(EMPTY_SPACE_LEFT*2) << " " << std::left << std::setw(EMPTY_SPACE_AFTER_LEFT-EMPTY_SPACE_LEFT);
-//        if(str == "QO")
-//            std::cout << "Archive quick open data" << std::endl;
-//        else if(str == "CMT")
-//            std::cout << "Archive comment";
-//        else if(str == "ACL")
-//            std::cout << "NTFS file permissions";
-//        else if(str == "STM")
-//            std::cout << "NTFS alternate data stream";
-//        else if(str == "RR")
-//            std::cout << "Recovery record";
-//    }
 }
 
-void InfoRAR5::deleteHeader(int index) {
-    // Проверяем индекс и можно ли этот хеадер удалить
-    int i = 0;
-////    Header *h;
-//    for(auto it = headers.begin(); it != headers.end(); it++, i++)
-//        if(i == index) {
-//            if((*it)->type.number != 2) {
-//                std::cout << "this header not allow deleting";
-//                return;
-//            }
-////            headers.erase(it);
-//            break;
-//        }
-    index_to_delete = index;
-    mode = 1;
-    to_file = new std::fstream;
-    to_file->open("test2.rar", std::ios::out | std::ios::out | std::ios::binary);
-    if(!to_file->is_open()) {
-        std::cout << "file not open" << std::endl;
-        throw;
-    }
-    headers.clear();
-    file->seekg(std::ios::beg + 8);
-    to_file->write(signature, sizeof (signature));
-
-    while(readNextBlock()) {
-
-    }
-
-//    i = 0;
-//    auto it = headers.begin();
-//    std::streampos b = std::ios::beg + 8;
-//    it++;
-//    Header* main_header;
-//    for(; it != headers.end(); it++) {
-//        Header *h = *it;
-//        std::streampos e;
-//        if(h->type.number == 5) {
-//            e = h->end_of_archive_flags.end;
-////            e = h->extra.locator.flags.end;
-////            int size = e - b;
-////            char *buff = new char[size];
-////            file->read(buff, size);
-////            new_file.write(buff, size);
-////            if( h->extra.locator.flags.number & 0x01) {
-////                int size_header = getSizeHeader(index);
-////                vint = packVInt(h->extra.locator.quick_open_offset.number - size_header);
-////                new_file.write(vint.data(), vint.size());
-//////                extractVInteger(header->extra.locator.quick_open_offset);
-//////                std::cout << "Quick open record offset is present. " << header->extra.locator.quick_open_offset.number << std::endl;
-////            }
-////            if( h->extra.locator.flags.number & 0x02) {
-////                vint = packVInt(h->extra.locator.recovery_offset.number);
-////                new_file.write(vint.data(), vint.size());
-//////                extractVInteger(header->extra.locator.recovery_offset);
-//////                std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
-////            }
-//        } else if(h->type.number == 1) {
-//            e = h->crc.begin;
-//            main_header = h;
-//	    }if(h->type.number == 2 || h->type.number == 3 ) {
-//			e = h->crc.begin;
-//        } else {
-//            throw std::runtime_error("type header error");
-//        }
-//        if(h->type.number == 3) {
-//            std::streampos save_pos = new_file.tellg();
-//            new_file.seekp(main_header->extra.locator.quick_open_offset.begin);
-//			std::vector<char> vint;
-//           	vint = packVInt(save_pos - new_file.tellp());
-
-
-//            // обновить смешение в main header
-//            // обновить если нужно CRC в main header
-//            // удалить суб хеадер
-//            // записать сервис хеадер
-
-//        } else {
-//            if(i != index) {
-//                int size = e - b;
-//                char *buff = new char[size];
-//                file->seekg(b);
-//                file->read(buff, size);
-//                new_file.write(buff, size);
-//                delete []buff;
-//            }
-//        }
-//        b = e;
-//        i++;
-//    }
-    to_file->close();
-}
-
-void InfoRAR5::expandVInt(std::vector<char> &v, int size_vint)
-{
-    if(v.size() < size_vint) {
-        v[v.size()-1] |= 0x80;
-        for(int i = v.size(); i < size_vint; i++)
-            if(i == size_vint-1)
-                v.push_back(0);
-            else
-                v.push_back(0x80);
-    }
-}
-
-void InfoRAR5::debug_write(std::streampos beg, char *buff, int size, std::fstream *f)
-{
-    std::streampos save_pos = f->tellg();
-    f->seekg(beg);
-    f->read(buff, size);
-    f->seekg(save_pos);
-}
-
-Header *InfoRAR5::getHeaderOfIndex(int index)
-{
-    for(auto it = headers.begin(); it != headers.end(); it++) {
-        if((*it)->index == index)
-            return *it;
-    }
-    return nullptr;
-}
-
-uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end, std::fstream *f)
-{
-    std::streampos save_pos = f->tellg();
-    int size_for_crc = end - begin;
-    std::vector<char> buff(size_for_crc);
-    f->seekg(begin);
-    f->read(buff.data(), size_for_crc);
-    std::vector<unsigned char>for_crc(size_for_crc);
-    std::copy(buff.begin(), buff.end(), for_crc.begin());
-    uint32_t crc;
-    f->seekg(save_pos);
-    return CRC32_function(for_crc.data(), size_for_crc);
-}
 
 void InfoRAR5::printHeader(uint64_t type)
 {
@@ -938,8 +768,6 @@ void InfoRAR5::printHeader(uint64_t type)
     }
     std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
 }
-
-
 
 void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 {
@@ -996,6 +824,5 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
             printName(names[i], keyboard);
         }
     }
-//    std::cout << std::flush;
 }
 
