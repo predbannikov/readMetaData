@@ -16,6 +16,9 @@ class BaseRAR;
 
 enum STATE_HEADER {STATE_MARKER_HEADER = 0, STATE_MAIN_HEADER = 1, STATE_FILE_HEADER = 2, STATE_SERVICE_HEADER = 3, STATE_END_OF_ARCHIVE = 5};
 
+
+// Абстрактный класс
+
 class BaseRAR {
 public:
     std::fstream *file;
