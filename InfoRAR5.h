@@ -102,6 +102,7 @@ public:
      * such as for all volumes except last when archiving from stdin to multivolume archive.
      */
     bool ignorUnpackSize = false;
+
 };
 
 
@@ -168,8 +169,8 @@ class InfoRAR5 : public BaseRAR{
     void writeInt32Offset(std::streampos target_pos, uint32_t num);
     int mode = 0;
     int index_to_delete = -1;
-    std::fstream *to_file;
 public:
+    std::fstream *to_file;
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
     InfoRAR5(std::fstream &file);

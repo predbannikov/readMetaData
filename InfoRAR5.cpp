@@ -75,6 +75,7 @@ void InfoRAR5::parseDataArea()
             extractData(header->package_data, header->size_data.number);
             break;
         case STATE_SERVICE_HEADER:
+            std::cout << "launch parse quick open offset" << std::endl;
             std::streampos begin_pos_to_file_;
             if(mode == 1) {
 
@@ -102,6 +103,7 @@ void InfoRAR5::parseDataArea()
                 int size_data = to_file->tellp() - begin_pos_to_file_;
                 writeVIntOffset(header->size_data, size_data);
                 writeVIntOffset(header->unpack_size, size_data);
+                writeInt32Offset(header->crc.beg, getCRC(header->crc.end, header->name.end));
             }
             break;
         }
@@ -302,7 +304,7 @@ std::vector<char> InfoRAR5::packVInt(uint64_t vint)
 uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end)
 {
     std::ifstream f;
-    f.open("test2.rar");
+    f.open("test2.rar", std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cerr << "file not open" << std::endl;
         throw std::runtime_error("file not opeing");
