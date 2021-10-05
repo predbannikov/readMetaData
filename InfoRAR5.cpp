@@ -68,7 +68,6 @@ Header *InfoRAR5::getHeaderOfIndex(int index)
 
 void InfoRAR5::parseDataArea()
 {
-//    auto lambda = [](const char &byte) { return byte>31; }; // всё кроме непечатаемых символов (из ASCII до 31)
     if(header->flags_common.number & 0x02) {
         switch (header->state) {
         case STATE_FILE_HEADER:
@@ -118,49 +117,18 @@ void InfoRAR5::getQuickOpenHeader(QuickOpenHeader *a, int index)
     extractVInteger(a->offset);
     extractVInteger(a->data_size);
     extractData(a->data, a->data_size.number);
-    std::cout << std::string(a->data.buff.begin(), a->data.buff.end()) << std::endl;
+    auto lambda = [](const char &byte) { return byte>31; }; // всё кроме непечатаемых символов (из ASCII до 31)
+    std::copy_if(a->data.buff.begin(), a->data.buff.end(), std::ostream_iterator<char>(std::cout), lambda);
     if(file->eof()) {
         std::cout << std::endl << "eof" << std::endl;
         throw std::runtime_error("unexpected eof");
     }
 
-//    std::streampos save_pos = file->tellg();
-//    std::streampos test_offset = header->pos.beg;
-//    test_offset -= a->offset.number;
-//    file->seekg(test_offset);
 
-//    Header *head_tmp = header;
-//    append_to_list = false;
-//    readNextBlock();
-//    append_to_list = true;
-//    header = head_tmp;
-//    file->seekg(save_pos);
 
     if(mode == 1) {
         Header *h = getHeaderOfIndex(index);
         int offset = service_pos_to_file - h->pos.beg;
-
-
-//        std::streampos save_pos = file->tellg();
-//        file->close();
-//        file->open("test2.rar", std::ios::in | std::ios::binary);
-//        if(!file->is_open()) {
-//            std::cout << "file not found" << std::endl;
-//            return ;
-//        }
-//        test_offset = service_pos_to_file;
-//        test_offset -= offset;
-//        file->seekg(test_offset);
-//        std::cout << std::endl;
-////        readNextBlock();
-
-//        file->close();
-//        file->open("test.rar", std::ios::in | std::ios::binary);
-//        if(!file->is_open()) {
-//            std::cout << "file not found" << std::endl;
-//            return ;
-//        }
-//        file->seekg(save_pos);
 
         writeVIntOffset(a->offset, offset);
         writeInt32Offset(a->crc32.beg, getCRC(a->crc32.end, a->data_size.end));
@@ -188,6 +156,22 @@ void InfoRAR5::redirectToFile(TypePos &var)
         var.beg = new_pos.beg;
         var.end = new_pos.end;
     }
+}
+
+
+bool InfoRAR5::crc_calc(std::streampos beg, std::streampos end, uint32_t real_CRC)
+{
+    int N;
+    if (N%32 !=0)
+    {
+        //добавить незначащие нули
+
+    }
+    int n = N/32; // количество кусков
+    // считаем W_i(x)
+
+    //считаем beta_i
+    //
 }
 
 void InfoRAR5::extractVInteger(TypeVInt &var) {
@@ -261,12 +245,6 @@ void InfoRAR5::changeMainHeader()
 {
     std::streampos save_pos = to_file->tellp();
 
-//    char buff1[18];
-//    debug_write(main_header->pos.beg, buff1, 18);
-//    std::cout << "1: ";
-//    for(int i = 0; i < 18; i++)
-//        std::cout << std::hex << (0xFF&buff1[i]);
-//    std::cout << std::endl;
 
     writeVIntOffset(main_header->extra.locator.quick_open_offset, header->pos.beg - main_header->pos.beg);
     writeInt32Offset(main_header->crc.beg, getCRC(main_header->crc.end, main_header->pos.end));
@@ -383,8 +361,6 @@ void InfoRAR5::parseExtraArea()
             extractVInteger(header->extra.locator.flags);
             if( header->extra.locator.flags.number & 0x01) {
                 extractVInteger(header->extra.locator.quick_open_offset);
-//                file->seekg(header->extra.locator.quick_open_offset.number + header->pos.beg);
-//                readNextBlock();
             }
             if( header->extra.locator.flags.number & 0x02)
                 extractVInteger(header->extra.locator.recovery_offset);		//  std::cout << "Recovery record offset is present. " << header->extra.locator.recovery_offset.number << std::endl;
@@ -393,10 +369,7 @@ void InfoRAR5::parseExtraArea()
         case STATE_FILE_HEADER:
         case STATE_SERVICE_HEADER:
             switch (header->extra.type.number) {
-            case 0x01:
-                break;
-            case 0x02:
-                break;
+
             case 0x03:
                 extractVInteger(header->extra.time.flag);
                 if(header->extra.time.flag.number & 0x0002)
@@ -405,14 +378,6 @@ void InfoRAR5::parseExtraArea()
                     header->extra.time.sctime = getTime(header->extra.time.ctime);
                 else if(header->extra.time.flag.number & 0x0008)
                     header->extra.time.satime = getTime(header->extra.time.atime);
-                break;
-            case 0x04:
-                break;
-            case 0x05:
-                break;
-            case 0x06:
-                break;
-            case 0x07:
                 break;
             }
             break;

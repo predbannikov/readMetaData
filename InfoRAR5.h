@@ -182,6 +182,9 @@ public:
     bool readNextBlock() override;
     size_t getSizeHeaders() override;
     void redirectToFile(TypePos &var);
+
+
+    bool crc_calc(std::streampos beg, std::streampos end, uint32_t real_CRC);
 };
 
 

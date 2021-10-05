@@ -18,11 +18,13 @@ public:
         rar_version = "nan";
     }
     ~InfoArch() {
-        file.close();
-        delete rar;
+        if (file.is_open())
+            file.close();
+        if (rar != nullptr)
+            delete rar;
     }
     Keyboard keyboard;
-    BaseRAR *rar;
+    BaseRAR *rar = nullptr;
     bool open(std::string FileName_1) {
         FileName = FileName_1;
         file.open(FileName_1, std::ios::in | std::ios::binary);
