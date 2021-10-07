@@ -74,6 +74,10 @@ public:
         int index = 0;
         const int count_headers = rar->getSizeHeaders();
         while(key != 27 && key != 'q') {
+            if(key == 'c') {
+                rar->checkUnpackCRC(index);
+            }
+
             if(key == 'j')
                 if(index < count_headers - 1)
                     index++;

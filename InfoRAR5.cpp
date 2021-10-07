@@ -116,45 +116,6 @@ uint32_t crc32_combine_new(uint32_t crc1, uint32_t crc2, uint64_t len2)
     return crc1;
 }
 
-bool InfoRAR5::crc_calc(std::streampos beg, std::streampos end, uint32_t real_CRC)
-{
-    std::streampos save_pos = file->tellg();
-    int size = end - beg;
-    if(size < 15)
-        return false;
-    int chunk = size / 3;
-    int size3 = chunk + 1;
-    int size2 = chunk + 1;
-    int size1 = size - chunk - chunk - 2;
-
-
-    unsigned char *buff1 = new unsigned char[size1];
-    unsigned char *buff2 = new unsigned char[size2];
-    unsigned char *buff3 = new unsigned char[size3];
-    file->seekg(beg);
-    file->read(reinterpret_cast<char*>(buff1), size1);
-    std::cout << "gcont =" << file->gcount() << std::endl;
-    file->read(reinterpret_cast<char*>(buff2), size2);
-    std::cout << "gcont =" << file->gcount() << std::endl;
-    file->read(reinterpret_cast<char*>(buff3), size3);
-    std::cout << "gcont =" << file->gcount() << std::endl;
-    std::cout << std::hex << std::endl;
-
-    uint32_t crc1 = CRC32_function(buff1, size1);
-    uint32_t crc2 = CRC32_function(buff2, size2);
-    uint32_t crc3 = CRC32_function(buff3, size3);
-    uint32_t crc_r = crc32_combine_new(crc2, crc3, size3);
-    uint32_t crc_r2 = crc32_combine_new(crc1, crc_r, size2+size3);
-    if(real_CRC != crc_r2)
-        std::cout << "not equal" << std::endl;
-    else
-        std::cout << "equal" << std::endl;
-    delete []buff1;
-    delete []buff2;
-    file->seekg(save_pos);
-    return true;
-}
-
 void InfoRAR5::deleteHeader(int index) {
     // Проверить индекс и можно ли этот хеадер удалить
     int i = 0;
@@ -372,63 +333,70 @@ std::vector<char> InfoRAR5::packVInt(uint64_t vint)
     return result;
 }
 
-uint32_t InfoRAR5::parallel_crc(std::streampos beg, std::streampos end, uint32_t crc)
+uint32_t InfoRAR5::parallel_crc(std::streampos beg, std::streampos end)
 {
     size_t length = end - beg;
     size_t len_ = length;
-    if(!length)
-        return crc;
-    unsigned long min_per_thread = 25;
-    unsigned long const max_threads = (length+min_per_thread-1) / min_per_thread;
-    unsigned long const hardware_threads = 2; // = std::thread::hardware_concurrency();
-    unsigned long const num_threads = std::min(hardware_threads!=0 ? hardware_threads : 2, max_threads);
-    size_t block_size = length / num_threads;
-    if(length%2) {
-        block_size++;
+    const uint32_t min_per_thread = 32;
+    if(!length) {
+        uint32_t res = 0;
+        calcCRC(beg, end, res);
+        return res;
     }
+    const uint32_t max_threads = (length+min_per_thread-1) / min_per_thread;
+    const uint32_t hardware_threads = std::thread::hardware_concurrency();
+    const uint32_t num_threads = std::min(hardware_threads != 0 ? hardware_threads : 2, max_threads);
+    size_t block_size = length / num_threads;
+
     std::vector<uint32_t> results(num_threads);
     std::vector<std::thread> threads(num_threads-1);
     std::streampos block_start = beg;
-    int i = 0;
-    while(length >= block_size)
+    std::cout << "block_size=" << std::dec << block_size << std::endl;
+    std::cout << "this_id=" << std::hex << std::this_thread::get_id() << std::endl;
+    for(size_t i = 0; i < num_threads-1; i++)
     {
         size_t block_end = block_start;
         block_end += block_size;
         threads[i] = std::thread(&InfoRAR5::calcCRC, this, block_start, block_end, std::ref(results[i]));
         block_start = block_end;
-        i++;
-        length -= block_size;
     }
-    if(length != 0)
-        calcCRC(block_start, end, results[num_threads-1]);
-
+    calcCRC(block_start, end, results[num_threads-1]);
     std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
 
-    uint32_t res_crc;
-//    while(length != len_) {
-        res_crc = crc32_combine_new(results[1], results[0], block_size);
-//    }
-    std::cout << crc << " " << res_crc << std::endl;
-    std::cout << "stop" << std::endl;
-    return crc;
+    uint32_t remaind = end - block_start;
+    uint32_t res_crc = results.back();
+    for(int i = results.size()-2; i >= 0; i--) {
+        res_crc = crc32_combine_new(results[i], res_crc, remaind);
+        remaind += block_size;
+    }
+    std::cout << "-------------------------" << std::endl;
+    std::cout << "COM CRC BLOCKS=" << res_crc << std::endl;
+    return res_crc;
+}
+
+bool InfoRAR5::checkCRC(uint32_t crc1, uint32_t crc2)
+{
+    std::cout << "CHECK CRC: " << std::hex << crc1 << " and " << crc2;
+    uint32_t res = crc1 ^ crc2;
+    if(res != 0)
+        std::cout << " not equal" << std::endl;
+    else
+        std::cout << " equal" << std::endl;
+    return res;
 }
 
 void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
 {
     std::ifstream f;
-    f.open("test.rar", std::ios::in | std::ios::binary);
+    f.open("testcrc.rar", std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cerr << "file not open" << std::endl;
         throw std::runtime_error("file not opeing");
     }
     int size = end - beg;
-    std::cout << "beg=" << beg << " size=" << size << std::endl;
     unsigned char *buf = new unsigned char[size];
     f.seekg(beg);
     f.read(reinterpret_cast<char*>(buf), size);
-    std::cout << "gconunt=" << f.gcount() << std::endl;
-//    if(f.gcount() < size)
-//        throw std::runtime_error("read less");
     f.close();
 
     unsigned long crc_table[256];
@@ -446,15 +414,17 @@ void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
     while (size--) {
         crc = crc_table[(crc ^ *buf++) & 0xFF] ^ (crc >> 8);
     }
-    result = crc ^ 0xFFFFFFFFUL;
     buf--;
-//    delete[] buf;
+    result = crc ^ 0xFFFFFFFFUL;
+    std::cout << std::hex << "thr_id =" << std::this_thread::get_id() << " : crc=" << result << std::endl;
+    return;
+    delete[] buf;
 }
 
 uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end)
 {
     std::ifstream f;
-    f.open("test2.rar", std::ios::in | std::ios::binary);
+    f.open("testcrc.rar", std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cerr << "file not open" << std::endl;
         throw std::runtime_error("file not opeing");
@@ -684,8 +654,8 @@ bool InfoRAR5::readNextBlock() {
             parseDataArea();
             if(header->type.number == 0x02) {
                 if(header->unpack_size.number == header->package_data.length) {
-                    parallel_crc(header->package_data.beg, header->package_data.end, header->unpacked_crc.number);
-//                    crc_calc();
+                    uint32_t crc = parallel_crc(header->package_data.beg, header->package_data.end);
+                    checkCRC(header->unpacked_crc.number, crc);
                 }
             }
             break;
@@ -714,6 +684,20 @@ bool InfoRAR5::readNextBlock() {
 size_t InfoRAR5::getSizeHeaders()
 {
     return headers.size();
+}
+
+void InfoRAR5::checkUnpackCRC(int index)
+{
+    if(header->type.number == 0x02) {
+        if(header->unpack_size.number == header->package_data.length) {
+            uint32_t crc = parallel_crc(header->package_data.beg, header->package_data.end);
+            if(checkCRC(header->unpacked_crc.number, crc)) {
+
+            } else {
+
+            }
+        }
+    }
 }
 
 Header::Header() {
@@ -941,6 +925,11 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
     if(h->flags_specific.number & 0x04)
         printLine("CRC UNPACK DATA", h->unpacked_crc.number, 'h');
 
+    if(h->unpack_size.number == h->package_data.length) {
+        uint32_t crc = parallel_crc(h->package_data.beg, h->package_data.end);
+        printLine("CALC CRC", crc, 'h');
+    }
+
     if(h->flags_specific.number & 0x08)
         printLine("UNPACK DATA SIZE", "unknown");
     else
@@ -956,6 +945,8 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 
     if(!h->extra.time.satime.empty())
         printLine("LAST ACCESS TIME", h->extra.time.satime);
+
+
 
     printLine(h->package_data);
     for(int i = 0; i < names.size(); i++) {
