@@ -3,6 +3,11 @@
 #include "baserar.h"
 #include <list>
 #include <vector>
+#include <bitset>
+#include <functional>
+#include <algorithm>
+#include <numeric>
+#include <thread>
 #define LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR    8
 #define MAX_SHOW_NUMBER_DATA_HEADER 			0x3F
 
@@ -105,7 +110,6 @@ public:
 
 };
 
-
 class InfoRAR5 : public BaseRAR{
     // выставляет состоянение переменной STATE_HEADER state
 /* Type of archive header. Possible values are:
@@ -155,8 +159,8 @@ class InfoRAR5 : public BaseRAR{
 
     void deleteHeader(int index) override;
 
-    std::streampos m_pos;
-    std::streampos m_pos_begin;
+//    std::streampos m_pos;
+//    std::streampos m_pos_begin;
 
     void expandVInt(std::vector<char> &v, int size_vint);
     void debug_write(std::streampos beg, char *buff, int size);
@@ -170,6 +174,9 @@ class InfoRAR5 : public BaseRAR{
     int mode = 0;
     int index_to_delete = -1;
 public:
+    uint32_t parallel_crc(std::streampos beg, std::streampos end,uint32_t crc);
+    void calcCRC(std::streampos beg, std::streampos end, uint32_t &result);
+
     std::fstream *to_file;
     static const char signature[LENGTH_SIGNATURE_FOR_5_X_VERSION_RAR];
 
