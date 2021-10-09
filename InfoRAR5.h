@@ -174,7 +174,8 @@ class InfoRAR5 : public BaseRAR{
     int mode = 0;
     int index_to_delete = -1;
 public:
-    uint32_t parallel_crc(std::streampos beg, std::streampos end);
+    uint32_t parallelCRC(std::streampos beg, std::streampos end);
+    uint32_t crcCombine(uint32_t crc1, uint32_t crc2, size_t len);
     bool checkCRC(uint32_t crc1, uint32_t crc2);
     void calcCRC(std::streampos beg, std::streampos end, uint32_t &result);
 

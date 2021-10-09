@@ -42,6 +42,7 @@ public:
         if(!checkArchive()) // если не формата RAR или RAR, но несовременной версии 5.0
             return false;
         std::cout << "Check archive success!\nFound: " << rar_version << std::endl;
+        rar->file_name = FileName;
         while(rar->readNextBlock()) {
         }
         return true;

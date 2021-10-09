@@ -66,54 +66,76 @@ void gf2_matrix_square(uint32_t *square, uint32_t *mat)
 
 uint32_t crc32_combine_new(uint32_t crc1, uint32_t crc2, uint64_t len2)
 {
-    int n;
-    unsigned long row;
-    uint32_t even[GF2_DIM];    /* even-power-of-two zeros operator */
-    uint32_t odd[GF2_DIM];     /* odd-power-of-two zeros operator */
+//    uint32_t crc11 = crc1;
+//    int len22 = len2;
+//    int n;
+//    unsigned long row;
+//    uint32_t even[GF2_DIM];    /* even-power-of-two zeros operator */
+//    uint32_t odd[GF2_DIM];     /* odd-power-of-two zeros operator */
 
-    /* degenerate case (also disallow negative lengths) */
-    if (len2 <= 0)
-        return crc1;
+//    /* degenerate case (also disallow negative lengths) */
+//    if (len2 <= 0)
+//        return crc1;
 
-    /* put operator for one zero bit in odd */
-    odd[0] = 0xedb88320UL;          /* CRC-32 polynomial */
-    row = 1;
-    for (n = 1; n < GF2_DIM; n++) {
-        odd[n] = row;
-        row <<= 1;
+//    /* put operator for one zero bit in odd */
+//    odd[0] = 0xedb88320UL;          /* CRC-32 polynomial */
+//    row = 1;
+//    for (n = 1; n < GF2_DIM; n++) {
+//        odd[n] = row;
+//        row <<= 1;
+//    }
+
+//    /* put operator for two zero bits in even */
+//    gf2_matrix_square(even, odd);
+
+//    /* put operator for four zero bits in odd */
+//    gf2_matrix_square(odd, even);
+
+//    /* apply len2 zeros to crc1 (first square will put the operator for one
+//       zero byte, eight zero bits, in even) */
+//    do {
+//        /* apply zeros operator for this bit of len2 */
+//        gf2_matrix_square(even, odd);
+//        if (len2 & 1)
+//            crc1 = gf2_matrix_times(even, crc1);
+//        len2 >>= 1;
+
+//        /* if no more bits set, then done */
+//        if (len2 == 0)
+//            break;
+
+//        /* another iteration of the loop with odd and even swapped */
+//        gf2_matrix_square(odd, even);
+//        if (len2 & 1)
+//            crc1 = gf2_matrix_times(odd, crc1);
+//        len2 >>= 1;
+
+//        /* if no more bits set, then done */
+//    } while (len2 != 0);
+
+//    /* return combined crc */
+//    crc1 ^= crc2;
+
+
+    unsigned long crc_table[256];
+    unsigned long crc;
+    for (int i = 0; i < 256; i++)
+    {
+        crc = i;
+        for (int j = 0; j < 8; j++) {
+            crc = crc & 1 ? (crc >> 1) ^ 0xEDB88320UL : crc >> 1;
+        }
+        crc_table[i] = crc;
+    };
+    crc = crc1;
+    int tmp = 0;
+    for (size_t i = 0; i < len2; i++) {
+        crc = crc_table[(crc ^ 0) & 0xFF] ^ (crc >> 8);
     }
 
-    /* put operator for two zero bits in even */
-    gf2_matrix_square(even, odd);
-
-    /* put operator for four zero bits in odd */
-    gf2_matrix_square(odd, even);
-
-    /* apply len2 zeros to crc1 (first square will put the operator for one
-       zero byte, eight zero bits, in even) */
-    do {
-        /* apply zeros operator for this bit of len2 */
-        gf2_matrix_square(even, odd);
-        if (len2 & 1)
-            crc1 = gf2_matrix_times(even, crc1);
-        len2 >>= 1;
-
-        /* if no more bits set, then done */
-        if (len2 == 0)
-            break;
-
-        /* another iteration of the loop with odd and even swapped */
-        gf2_matrix_square(odd, even);
-        if (len2 & 1)
-            crc1 = gf2_matrix_times(odd, crc1);
-        len2 >>= 1;
-
-        /* if no more bits set, then done */
-    } while (len2 != 0);
-
-    /* return combined crc */
-    crc1 ^= crc2;
-    return crc1;
+//    uint32_t result = crc ^ crc2;
+//    std::cout << std::hex << crc1 << " " << result << std::endl;
+    return crc ^ crc2;
 }
 
 void InfoRAR5::deleteHeader(int index) {
@@ -257,8 +279,12 @@ void InfoRAR5::extractVInteger(TypeVInt &var) {
 void InfoRAR5::extractData(TypeData &data_var, size_t length)
 {
     data_var.beg = file->tellg();
-    data_var.buff.resize(length);
-    file->read(data_var.buff.data(), length);
+    if(length > 1024)
+        file->seekg(file->tellg()+std::streampos(length));
+    else {
+        data_var.buff.resize(length);
+        file->read(data_var.buff.data(), length);
+    }
     data_var.end = file->tellg();
     data_var.length = length;
     redirectToFile(data_var);
@@ -333,7 +359,7 @@ std::vector<char> InfoRAR5::packVInt(uint64_t vint)
     return result;
 }
 
-uint32_t InfoRAR5::parallel_crc(std::streampos beg, std::streampos end)
+uint32_t InfoRAR5::parallelCRC(std::streampos beg, std::streampos end)
 {
     size_t length = end - beg;
     size_t len_ = length;
@@ -353,6 +379,7 @@ uint32_t InfoRAR5::parallel_crc(std::streampos beg, std::streampos end)
     std::streampos block_start = beg;
     std::cout << "block_size=" << std::dec << block_size << std::endl;
     std::cout << "this_id=" << std::hex << std::this_thread::get_id() << std::endl;
+    long mark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     for(size_t i = 0; i < num_threads-1; i++)
     {
         size_t block_end = block_start;
@@ -362,16 +389,43 @@ uint32_t InfoRAR5::parallel_crc(std::streampos beg, std::streampos end)
     }
     calcCRC(block_start, end, results[num_threads-1]);
     std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
-
+    long dmark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - mark;
+    std::cout << "time calc crc = " << std::dec << dmark << std::endl;
     uint32_t remaind = end - block_start;
     uint32_t res_crc = results.back();
+    mark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+
     for(int i = results.size()-2; i >= 0; i--) {
-        res_crc = crc32_combine_new(results[i], res_crc, remaind);
+//        res_crc = crc32_combine_new(results[i], res_crc, remaind);
+        res_crc = crcCombine(results[i], res_crc, remaind);
         remaind += block_size;
     }
-    std::cout << "-------------------------" << std::endl;
-    std::cout << "COM CRC BLOCKS=" << res_crc << std::endl;
+    dmark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - mark;
+
+
+    std::cout << "------------------------- time=" << std::dec << dmark << std::endl;
+    std::cout << "COM CRC BLOCKS=" << std::hex << res_crc << std::endl;
     return res_crc;
+}
+
+uint32_t InfoRAR5::crcCombine(uint32_t crc1, uint32_t crc2, size_t len)
+{
+    uint32_t crc_table[256];
+    uint32_t crc;
+    for (uint32_t i = 0; i < 256; i++)
+    {
+        crc = i;
+        for (uint8_t j = 0; j < 8; j++) {
+            crc = crc & 1 ? (crc >> 1) ^ 0xEDB88320UL : crc >> 1;
+        }
+        crc_table[i] = crc;
+    };
+    crc = crc1;
+    int tmp = 0;
+    for (size_t i = 0; i < len; i++) {
+        crc = crc_table[(crc ^ 0) & 0xFF] ^ (crc >> 8);
+    }
+    return crc ^ crc2;
 }
 
 bool InfoRAR5::checkCRC(uint32_t crc1, uint32_t crc2)
@@ -388,7 +442,7 @@ bool InfoRAR5::checkCRC(uint32_t crc1, uint32_t crc2)
 void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
 {
     std::ifstream f;
-    f.open("testcrc.rar", std::ios::in | std::ios::binary);
+    f.open(file_name, std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cerr << "file not open" << std::endl;
         throw std::runtime_error("file not opeing");
@@ -411,14 +465,13 @@ void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
     };
     crc = 0xFFFFFFFFUL;
     int tmp = 0;
-    while (size--) {
-        crc = crc_table[(crc ^ *buf++) & 0xFF] ^ (crc >> 8);
+    for (size_t i = 0; i < size; i++) {
+        crc = crc_table[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
     }
-    buf--;
     result = crc ^ 0xFFFFFFFFUL;
     std::cout << std::hex << "thr_id =" << std::this_thread::get_id() << " : crc=" << result << std::endl;
-    return;
     delete[] buf;
+    return;
 }
 
 uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end)
@@ -654,7 +707,7 @@ bool InfoRAR5::readNextBlock() {
             parseDataArea();
             if(header->type.number == 0x02) {
                 if(header->unpack_size.number == header->package_data.length) {
-                    uint32_t crc = parallel_crc(header->package_data.beg, header->package_data.end);
+                    uint32_t crc = parallelCRC(header->package_data.beg, header->package_data.end);
                     checkCRC(header->unpacked_crc.number, crc);
                 }
             }
@@ -690,7 +743,7 @@ void InfoRAR5::checkUnpackCRC(int index)
 {
     if(header->type.number == 0x02) {
         if(header->unpack_size.number == header->package_data.length) {
-            uint32_t crc = parallel_crc(header->package_data.beg, header->package_data.end);
+            uint32_t crc = parallelCRC(header->package_data.beg, header->package_data.end);
             if(checkCRC(header->unpacked_crc.number, crc)) {
 
             } else {
@@ -926,7 +979,7 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
         printLine("CRC UNPACK DATA", h->unpacked_crc.number, 'h');
 
     if(h->unpack_size.number == h->package_data.length) {
-        uint32_t crc = parallel_crc(h->package_data.beg, h->package_data.end);
+        uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
         printLine("CALC CRC", crc, 'h');
     }
 

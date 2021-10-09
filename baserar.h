@@ -23,6 +23,8 @@ class BaseRAR {
 public:
     std::fstream *file;
 	std::streampos end;
+
+    std::string file_name;
 	
     BaseRAR(std::fstream &file1): file(&file1){
         end=file->tellg();
