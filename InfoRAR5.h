@@ -190,10 +190,11 @@ public:
     bool append_to_list = true;
     bool readNextBlock() override;
     size_t getSizeHeaders() override;
-    void checkUnpackCRC(int index) override;
+    void checkUnpackCRC(int index, Keyboard &keyboard) override;
     void redirectToFile(TypePos &var);
 
 
+    void printNameFiles(int index, Keyboard &keyboard);
 };
 
 

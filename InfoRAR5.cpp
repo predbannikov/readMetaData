@@ -377,8 +377,8 @@ uint32_t InfoRAR5::parallelCRC(std::streampos beg, std::streampos end)
     std::vector<uint32_t> results(num_threads);
     std::vector<std::thread> threads(num_threads-1);
     std::streampos block_start = beg;
-    std::cout << "block_size=" << std::dec << block_size << std::endl;
-    std::cout << "this_id=" << std::hex << std::this_thread::get_id() << std::endl;
+//    std::cout << "block_size=" << std::dec << block_size << std::endl;
+//    std::cout << "this_id=" << std::hex << std::this_thread::get_id() << std::endl;
     long mark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     for(size_t i = 0; i < num_threads-1; i++)
     {
@@ -390,7 +390,7 @@ uint32_t InfoRAR5::parallelCRC(std::streampos beg, std::streampos end)
     calcCRC(block_start, end, results[num_threads-1]);
     std::for_each(threads.begin(), threads.end(), std::mem_fn(&std::thread::join));
     long dmark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - mark;
-    std::cout << "time calc crc = " << std::dec << dmark << std::endl;
+//    std::cout << "time calc crc = " << std::dec << dmark << std::endl;
     uint32_t remaind = end - block_start;
     uint32_t res_crc = results.back();
     mark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -403,8 +403,8 @@ uint32_t InfoRAR5::parallelCRC(std::streampos beg, std::streampos end)
     dmark = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count() - mark;
 
 
-    std::cout << "------------------------- time=" << std::dec << dmark << std::endl;
-    std::cout << "COM CRC BLOCKS=" << std::hex << res_crc << std::endl;
+//    std::cout << "------------------------- time=" << std::dec << dmark << std::endl;
+//    std::cout << "COM CRC BLOCKS=" << std::hex << res_crc << std::endl;
     return res_crc;
 }
 
@@ -469,7 +469,7 @@ void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
         crc = crc_table[(crc ^ buf[i]) & 0xFF] ^ (crc >> 8);
     }
     result = crc ^ 0xFFFFFFFFUL;
-    std::cout << std::hex << "thr_id =" << std::this_thread::get_id() << " : crc=" << result << std::endl;
+//    std::cout << std::hex << "thr_id =" << std::this_thread::get_id() << " : crc=" << result << std::endl;
     delete[] buf;
     return;
 }
@@ -739,17 +739,18 @@ size_t InfoRAR5::getSizeHeaders()
     return headers.size();
 }
 
-void InfoRAR5::checkUnpackCRC(int index)
+void InfoRAR5::checkUnpackCRC(int index, Keyboard &keyboard)
 {
-    if(header->type.number == 0x02) {
-        if(header->unpack_size.number == header->package_data.length) {
-            uint32_t crc = parallelCRC(header->package_data.beg, header->package_data.end);
-            if(checkCRC(header->unpacked_crc.number, crc)) {
-
-            } else {
-
-            }
+    Header *h = getHeaderOfIndex(index);
+    if(h->type.number == 0x02) {
+        if(h->unpack_size.number == h->package_data.length) {
+            uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
+            printLine("CALC CRC", crc, 'h');
+        } else {
+            printLine("THIS PACKAGE COMPRESED");
         }
+    } else {
+        printLine("THIS IS NOT FILE HEADER");
     }
 }
 
@@ -839,7 +840,7 @@ void InfoRAR5::printLine(TypeData &data)
         str.push_back(' ');
     }
     size_t width = FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1;
-    std::cout << "|" << fillStrCol("DATA", width) << std::endl;
+    std::cout << "|" << fillStrCol("DATA", width) << "|" << std::endl;
     while(width < str.length()) {
         std::cout << "|" << str.substr(0, width) << "|" << std::endl;
         str.erase(0, width);
@@ -951,6 +952,25 @@ void InfoRAR5::printHeader(uint64_t type)
     std::cout << "|" << std::endl << "|" << fillStrCol("-", FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 1, '-') << "|" << std::endl;
 }
 
+void InfoRAR5::printNameFiles(int index, Keyboard &keyboard)
+{
+    std::vector<std::string> names;
+    for(auto it = headers.begin(); it != headers.end(); it++)
+        names.push_back(std::string((*it)->name.buff.begin(), (*it)->name.buff.end()));
+
+    for(int i = 0; i < names.size(); i++) {
+        gotoxy(FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 5, i + 1);
+        if(i == index) {
+            set_display_atrib(F_BLACK);
+            set_display_atrib(B_WHITE);
+            printName(names[i], keyboard);
+            resetcolor();
+        } else {
+            printName(names[i], keyboard);
+        }
+    }
+}
+
 void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 {
     int width_term, heigth_term;
@@ -978,10 +998,10 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
     if(h->flags_specific.number & 0x04)
         printLine("CRC UNPACK DATA", h->unpacked_crc.number, 'h');
 
-    if(h->unpack_size.number == h->package_data.length) {
-        uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
-        printLine("CALC CRC", crc, 'h');
-    }
+//    if(h->unpack_size.number == h->package_data.length) {
+//        uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
+//        printLine("CALC CRC", crc, 'h');
+//    }
 
     if(h->flags_specific.number & 0x08)
         printLine("UNPACK DATA SIZE", "unknown");
@@ -998,20 +1018,10 @@ void InfoRAR5::printInfo(size_t index, Keyboard &keyboard)
 
     if(!h->extra.time.satime.empty())
         printLine("LAST ACCESS TIME", h->extra.time.satime);
-
-
-
     printLine(h->package_data);
-    for(int i = 0; i < names.size(); i++) {
-        gotoxy(FIRST_COLUMN_WIDTH + SECOND_COLUMN_WIDTH + 5, i + 1);
-        if(i == index) {
-            set_display_atrib(F_BLACK);
-            set_display_atrib(B_WHITE);
-            printName(names[i], keyboard);
-            resetcolor();
-        } else {
-            printName(names[i], keyboard);
-        }
-    }
+
+
+
+//    printNameFiles();
 }
 

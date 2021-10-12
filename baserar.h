@@ -35,7 +35,8 @@ public:
     virtual void printInfo(size_t index, Keyboard &keyboard) = 0;	//{};
     virtual size_t getSizeHeaders() = 0;							//{ return 0; }
     virtual void deleteHeader(int index) = 0;						//
-    virtual void checkUnpackCRC(int index) = 0;
+    virtual void checkUnpackCRC(int index, Keyboard &keyboard) = 0;
+    virtual void printNameFiles(int curIndex, Keyboard &keyboard) = 0;
 
     virtual ~BaseRAR() {};
 };

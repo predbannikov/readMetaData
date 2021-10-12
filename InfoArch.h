@@ -75,9 +75,6 @@ public:
         int index = 0;
         const int count_headers = rar->getSizeHeaders();
         while(key != 27 && key != 'q') {
-            if(key == 'c') {
-                rar->checkUnpackCRC(index);
-            }
 
             if(key == 'j')
                 if(index < count_headers - 1)
@@ -97,7 +94,17 @@ public:
                     index = 0;
             if(key == 'd')
                 rar->deleteHeader(index);
+
             rar->printInfo(index, keyboard);
+
+            if(key == 'c') {
+                rar->checkUnpackCRC(index, keyboard);
+//                if(h->unpack_size.number == h->package_data.length) {
+//                    uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
+//                    rar->printLine("CALC CRC", crc, 'h');
+//                }
+            }
+            rar->printNameFiles(index, keyboard);
             key = keyboard.__getch();
         }
         clrscr();
