@@ -1,4 +1,4 @@
-РАБОТА С АРХИВОМ RAR В C++  <img src="https://github.com/predbannikov/readMetaData/blob/master/rar.png" width="20">
+РАБОТА С АРХИВОМ RAR В C++  <img src="https://github.com/predbannikov/readMetaData/blob/master/rar.png" width="24">
 --------------------
 
 За основу взята спецификация с сайта [rarlab][1]
