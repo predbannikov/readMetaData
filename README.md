@@ -1,6 +1,23 @@
-РАБОТА С RAR АРХИВОМ ![alt-текст](https://github.com/predbannikov/readMetaData/blob/master/rar.png "logo rar 1")
+РАБОТА С АРХИВОМ RAR В C++  <img src="https://github.com/predbannikov/readMetaData/blob/master/rar.png" width="20">
 --------------------
 
 За основу взята спецификация с сайта [rarlab][1]
 
+- версии зависимостей на которых производилось тестирование cmake (3.5), gcc (10.3.0)
+- запустить с указанием параметра имени файла архива
+- мнемонический код терминала ECMA-48
+
+|Клавиши управления|ОПИСАНИЕ|
+|:-------------:|:------------------|
+|j / k| листать вверх/вниз. |
+|h / l| листать вверх/вниз но с шагом 10 строчек. 
+|c| посчитать CRC файла. |
+|d| удалить файл из архива (**ОСТОРОЖНО! создаётся новый файл, с таким же именем и приставкой _1**). |
+|ESQ/q| выйти из программы. |
+
 [1]: https://www.rarlab.com/technote.htm
+
+![alt-текст][logo]
+
+[logo]: https://github.com/predbannikov/readMetaData/blob/master/screenshot.png
+ "работа программы"
