@@ -25,6 +25,7 @@ public:
 	std::streampos end;
 
     std::string file_name;
+    std::string file_name_to_delete;
 	
     BaseRAR(std::fstream &file1): file(&file1){
         end=file->tellg();
@@ -37,7 +38,7 @@ public:
     virtual void deleteHeader(int index) = 0;						//
     virtual void checkUnpackCRC(int index, Keyboard &keyboard) = 0;
     virtual void printNameFiles(int curIndex, Keyboard &keyboard) = 0;
-
+    virtual void printLine(std::string first, char ch = ' ') = 0;
     virtual ~BaseRAR() {};
 };
 

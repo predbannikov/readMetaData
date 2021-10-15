@@ -97,14 +97,17 @@ public:
 
             rar->printInfo(index, keyboard);
 
-            if(key == 'c') {
+            if(key == 'c')
                 rar->checkUnpackCRC(index, keyboard);
-//                if(h->unpack_size.number == h->package_data.length) {
-//                    uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
-//                    rar->printLine("CALC CRC", crc, 'h');
-//                }
-            }
+
+            rar->printLine(" HELP ", '=');
+            rar->printLine("navigation - hjkl");
+            rar->printLine("delete file - d (new name _1 append");
+            rar->printLine("check CRC file - c");
+            rar->printLine("exit program - q / ESC");
+
             rar->printNameFiles(index, keyboard);
+
             key = keyboard.__getch();
         }
         clrscr();

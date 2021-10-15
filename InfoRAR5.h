@@ -163,7 +163,7 @@ class InfoRAR5 : public BaseRAR{
 //    std::streampos m_pos_begin;
 
     void expandVInt(std::vector<char> &v, int size_vint);
-    void debug_write(std::streampos beg, char *buff, int size);
+    void debug_write(std::streampos beg, char *buff, int size, std::string file_name_);
     Header *getHeaderOfIndex(int index);
     uint32_t getCRC(std::streampos begin, std::streampos end);
     unsigned int CRC32_function(unsigned char *buf, unsigned long len);

@@ -23,10 +23,10 @@ InfoRAR5::~InfoRAR5()
         delete *it;
 }
 
-void InfoRAR5::debug_write(std::streampos beg, char *buff, int size)
+void InfoRAR5::debug_write(std::streampos beg, char *buff, int size, std::string file_name_)
 {
     std::fstream f;
-    f.open("test2.rar", std::ios::in | std::ios::binary);
+    f.open(file_name_, std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cout << "file not opening to write" << std::endl;
         return;
@@ -143,8 +143,10 @@ void InfoRAR5::deleteHeader(int index) {
     int i = 0;
     index_to_delete = index;
     mode = 1;
+    file_name_to_delete = file_name;
+    file_name_to_delete.insert(file_name.size() - 4, "_1");
     to_file = new std::fstream;
-    to_file->open("test2.rar", std::ios::out | std::ios::trunc | std::ios::ate | std::ios::binary);
+    to_file->open(file_name_to_delete, std::ios::out | std::ios::trunc | std::ios::ate | std::ios::binary);
     if(!to_file->is_open()) {
         std::cout << "file not open" << std::endl;
         throw;
@@ -179,11 +181,8 @@ void InfoRAR5::parseDataArea()
             if(mode == 1) {
                 to_file->sync();
                 changeMainHeader();
-//                to_file->sync();
-
+                to_file->sync();
                 begin_pos_to_file_ = to_file->tellp();
-//                std::cout << begin_pos_to_file_ << std::endl;
-//                std::cout << std::endl;
             }
             std::streampos begin_pos = file->tellg();
             int counter = 0;
@@ -477,7 +476,7 @@ void InfoRAR5::calcCRC(std::streampos beg, std::streampos end, uint32_t &result)
 uint32_t InfoRAR5::getCRC(std::streampos begin, std::streampos end)
 {
     std::ifstream f;
-    f.open("testcrc.rar", std::ios::in | std::ios::binary);
+    f.open(file_name_to_delete, std::ios::in | std::ios::binary);
     if(!f.is_open()) {
         std::cerr << "file not open" << std::endl;
         throw std::runtime_error("file not opeing");
@@ -512,7 +511,7 @@ unsigned int InfoRAR5::CRC32_function(unsigned char *buf, unsigned long len) // 
 void InfoRAR5::writeVIntOffset(const TypeVInt &vint, int num_vint)
 {
     std::fstream f;
-    f.open("test2.rar", std::fstream::out | std::fstream::in | std::fstream::binary);
+    f.open(file_name_to_delete, std::fstream::out | std::fstream::in | std::fstream::binary);
     if(!f.is_open()) {
         std::cout << "file not open" << std::endl;
         return ;
@@ -528,7 +527,7 @@ void InfoRAR5::writeVIntOffset(const TypeVInt &vint, int num_vint)
 void InfoRAR5::writeInt32Offset(std::streampos target_pos, uint32_t num)
 {
     std::fstream f;
-    f.open("test2.rar", std::fstream::out | std::fstream::in | std::fstream::binary);
+    f.open(file_name_to_delete, std::fstream::out | std::fstream::in | std::fstream::binary);
     if(!f.is_open()) {
         std::cout << "file not open" << std::endl;
         return ;
@@ -742,7 +741,7 @@ size_t InfoRAR5::getSizeHeaders()
 void InfoRAR5::checkUnpackCRC(int index, Keyboard &keyboard)
 {
     Header *h = getHeaderOfIndex(index);
-    if(h->type.number == 0x02) {
+    if(h->type.number == 0x02 || h->type.number == 0x03) {
         if(h->unpack_size.number == h->package_data.length) {
             uint32_t crc = parallelCRC(h->package_data.beg, h->package_data.end);
             printLine("CALC CRC", crc, 'h');
